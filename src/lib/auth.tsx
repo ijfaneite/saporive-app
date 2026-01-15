@@ -67,8 +67,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         },
         body: new URLSearchParams({
           grant_type: '',
-          username,
-          password,
+          username: username,
+          password: password,
           scope: '',
           client_id: '',
           client_secret: ''
@@ -80,9 +80,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
     
     if (!response.ok) {
-        const errorBody = await response.text();
-        console.error("Login failed response:", errorBody);
-        throw new Error('Usuario o clave incorrectos. Status: ' + response.status);
+        const errorBody = await response.json();
+        const errorMessage = errorBody.detail || 'Usuario o clave incorrectos.';
+        throw new Error(errorMessage);
     }
 
     const { access_token }: Token = await response.json();
