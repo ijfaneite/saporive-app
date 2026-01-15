@@ -76,7 +76,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         })
       });
     } catch (error) {
-      throw new Error("Login - No se pudo conectar al servidor de autenticación. - " + error + `${API_BASE_URL}${API_ROUTES.token}` + " Username: " + username + " Password: " + password);
+      throw new Error("Login - No se pudo conectar al servidor de autenticación. ");
     }
 
     if (!response.ok) {
@@ -85,7 +85,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       throw new Error(errorMessage);
     }
 
-    const { access_token }: Token = await response.json();
+    const { access_token, token_type } = await response.json();
 
     // Give the server a moment to process the token
     await new Promise(resolve => setTimeout(resolve, 500));
@@ -96,7 +96,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     let userResponse;
     try {
       userResponse = await fetch(`${API_BASE_URL}${API_ROUTES.me}`, {
-        headers: { Authorization: `Bearer ${access_token}` },
+        //headers: { Authorization: `Bearer ${access_token}` },
+        method: "GET",
+        headers: {
+          "Authorization": `Bearer ${access_token}`,
+          "Accept": "application/json"
+        }
       });
     } catch (error) {
       console.error("Error fetching user:", error);
@@ -105,7 +110,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     if (!userResponse.ok) {
       const errorBody = await userResponse.text();
-      console.error("Fetch user failed:", errorBody)
       throw new Error('No se pudieron obtener los datos del usuario desde el servidor.');
     }
 
