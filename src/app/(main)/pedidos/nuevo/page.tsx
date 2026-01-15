@@ -94,7 +94,7 @@ export default function NuevoPedidoPage() {
   };
 
   const handleUpdateCantidad = (idProducto: string, cantidad: number) => {
-    const newCantidad = Math.max(1, cantidad || 1);
+    const newCantidad = !isNaN(cantidad) && cantidad > 0 ? cantidad : 1;
     setLineasPedido(currentLineas =>
       currentLineas.map(linea =>
         linea.producto.idProducto === idProducto ? { ...linea, cantidad: newCantidad } : linea
@@ -191,7 +191,7 @@ export default function NuevoPedidoPage() {
   return (
     <div className="p-4 space-y-6">
        <div className="flex items-center gap-4">
-        <Link href="/pedidos">
+        <Link href="/pedidos" passHref>
           <Button variant="outline" size="icon">
             <ArrowLeft />
           </Button>
