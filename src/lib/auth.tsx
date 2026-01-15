@@ -60,7 +60,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const response = await fetch(`${API_BASE_URL}${API_ROUTES.token}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({ username, password }),
+      body: new URLSearchParams({
+        grant_type: '',
+        username,
+        password,
+        scope: '',
+        client_id: '',
+        client_secret: '',
+      }),
     });
 
     if (!response.ok) {
