@@ -58,26 +58,30 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const login = async (username: string, password: string) => {
     let response;
+    const clientId = '';
+    const clientSecret = '';
+
     try {
       response = await fetch(`${API_BASE_URL}${API_ROUTES.token}`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        headers: { 
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'Authorization': 'Basic ' + btoa(`${clientId}:${clientSecret}`)
+        },
         body: new URLSearchParams({
-          grant_type: '',
+          grant_type: 'password', // Standard practice is to use 'password' for this grant type
           username,
           password,
           scope: '',
-          client_id: '',
-          client_secret: '',
         }),
       });
     } catch (error) {
         console.error("Error fetching token:", error);
-        throw new Error("No se pudo conectar al servidor de autenticación.");
+        throw new Error("No se pudo conectar al servidor de autenticación. " + `${API_BASE_URL}${API_ROUTES.token}`);
     }
     
     if (!response.ok) {
-        throw new Error('Usuario o clave incorrectos');
+        throw new Error('Usuario o clave incorrectos ' + `${API_BASE_URL}${API_ROUTES.token}`);
     }
 
     const { access_token }: Token = await response.json();
