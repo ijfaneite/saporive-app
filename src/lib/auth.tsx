@@ -58,30 +58,31 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const login = async (username: string, password: string) => {
     let response;
-    const clientId = '';
-    const clientSecret = '';
-
+    
     try {
       response = await fetch(`${API_BASE_URL}${API_ROUTES.token}`, {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/x-www-form-urlencoded',
-          'Authorization': 'Basic ' + btoa(`${clientId}:${clientSecret}`)
         },
         body: new URLSearchParams({
-          grant_type: 'password', // Standard practice is to use 'password' for this grant type
+          grant_type: '',
           username,
           password,
           scope: '',
+          client_id: '',
+          client_secret: ''
         }),
       });
     } catch (error) {
         console.error("Error fetching token:", error);
-        throw new Error("No se pudo conectar al servidor de autenticación. " + `${API_BASE_URL}${API_ROUTES.token}`);
+        throw new Error("No se pudo conectar al servidor de autenticación.");
     }
     
     if (!response.ok) {
-        throw new Error('Usuario o clave incorrectos ' + `${API_BASE_URL}${API_ROUTES.token}`);
+        const errorBody = await response.text();
+        console.error("Login failed response:", errorBody);
+        throw new Error('Usuario o clave incorrectos. Status: ' + response.status);
     }
 
     const { access_token }: Token = await response.json();
@@ -103,6 +104,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
 
     if (!userResponse.ok) {
+        const errorBody = await userResponse.text();
+        console.error("Fetch user failed:", errorBody)
         throw new Error('No se pudieron obtener los datos del usuario desde el servidor.');
     }
 
