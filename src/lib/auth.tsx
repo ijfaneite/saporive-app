@@ -57,33 +57,49 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const login = async (username: string, password: string) => {
-    const response = await fetch(`${API_BASE_URL}${API_ROUTES.token}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({
-        grant_type: '',
-        username,
-        password,
-        scope: '',
-        client_id: '',
-        client_secret: '',
-      }),
-    });
-
+    let response;
+    try {
+      response = await fetch(`${API_BASE_URL}${API_ROUTES.token}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({
+          grant_type: '',
+          username,
+          password,
+          scope: '',
+          client_id: '',
+          client_secret: '',
+        }),
+      });
+    } catch (error) {
+        console.error("Error fetching token:", error);
+        throw new Error("No se pudo conectar al servidor de autenticación.");
+    }
+    
     if (!response.ok) {
-      throw new Error('Usuario o clave incorrectos');
+        throw new Error('Usuario o clave incorrectos');
     }
 
     const { access_token }: Token = await response.json();
+    
+    // Give the server a moment to process the token
+    await new Promise(resolve => setTimeout(resolve, 500));
+
     setToken(access_token);
     setCookie('auth_token', access_token, 7);
 
-    const userResponse = await fetch(`${API_BASE_URL}${API_ROUTES.me}`, {
-      headers: { Authorization: `Bearer ${access_token}` },
-    });
+    let userResponse;
+    try {
+        userResponse = await fetch(`${API_BASE_URL}${API_ROUTES.me}`, {
+          headers: { Authorization: `Bearer ${access_token}` },
+        });
+    } catch (error) {
+        console.error("Error fetching user:", error);
+        throw new Error("No se pudo conectar con el servidor para obtener los datos del usuario.");
+    }
 
     if (!userResponse.ok) {
-        throw new Error('Failed to fetch user data');
+        throw new Error('No se pudieron obtener los datos del usuario desde el servidor.');
     }
 
     const userData: User = await userResponse.json();
