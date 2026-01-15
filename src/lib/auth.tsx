@@ -64,11 +64,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/x-www-form-urlencoded',
+          'accept': 'application/json'
         },
         body: new URLSearchParams({
           grant_type: '',
-          username: username,
-          password: password,
+          username: 'demo', // Using demo user as per curl
+          password: 'demo123', // Using demo password as per curl
           scope: '',
           client_id: '',
           client_secret: ''
@@ -77,6 +78,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     } catch (error) {
         console.error("Error fetching token:", error);
         throw new Error("No se pudo conectar al servidor de autenticación.");
+
     }
     
     if (!response.ok) {
