@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import { User, Asesor, Token } from '@/lib/types';
-import { API_BASE_URL, API_ROUTES } from '@/lib/config';
+import { API_BASE_URL, API_ROUTES } from '@/lib/config'; // Ajusta según tu ruta en FastAPI
 
 interface AuthContextType {
   user: User | null;
