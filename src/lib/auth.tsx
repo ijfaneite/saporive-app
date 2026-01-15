@@ -24,11 +24,11 @@ function setCookie(name: string, value: string, days: number) {
     date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
     expires = "; expires=" + date.toUTCString();
   }
-  document.cookie = name + "=" + (value || "")  + expires + "; path=/";
+  document.cookie = name + "=" + (value || "") + expires + "; path=/";
 }
 
-function eraseCookie(name: string) {   
-  document.cookie = name +'=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;';
+function eraseCookie(name: string) {
+  document.cookie = name + '=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;';
 }
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
@@ -58,37 +58,35 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const login = async (username: string, password: string) => {
     let response;
-    
+
     try {
       response = await fetch(`${API_BASE_URL}${API_ROUTES.token}`, {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/x-www-form-urlencoded',
-          'accept': 'application/json'
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+          "Accept": "application/json"
         },
         body: new URLSearchParams({
-          grant_type: '',
-          username: 'demo', // Using demo user as per curl
-          password: 'demo123', // Using demo password as per curl
-          scope: '',
-          client_id: '',
-          client_secret: ''
-        }),
+          grant_type: "password",
+          username: username,
+          password: password,
+          client_id: "string",
+          scope: "scope",
+          client_secret: "********"
+        })
       });
     } catch (error) {
-        console.error("Error fetching token:", error);
-        throw new Error("No se pudo conectar al servidor de autenticación.");
-
+      throw new Error("Login - No se pudo conectar al servidor de autenticación. - " + error + `${API_BASE_URL}${API_ROUTES.token}` + " Username: " + username + " Password: " + password);
     }
-    
+
     if (!response.ok) {
-        const errorBody = await response.json();
-        const errorMessage = errorBody.detail || 'Usuario o clave incorrectos.';
-        throw new Error(errorMessage);
+      const errorBody = await response.json();
+      const errorMessage = errorBody.detail || 'Usuario o clave incorrectos.';
+      throw new Error(errorMessage);
     }
 
     const { access_token }: Token = await response.json();
-    
+
     // Give the server a moment to process the token
     await new Promise(resolve => setTimeout(resolve, 500));
 
@@ -97,18 +95,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     let userResponse;
     try {
-        userResponse = await fetch(`${API_BASE_URL}${API_ROUTES.me}`, {
-          headers: { Authorization: `Bearer ${access_token}` },
-        });
+      userResponse = await fetch(`${API_BASE_URL}${API_ROUTES.me}`, {
+        headers: { Authorization: `Bearer ${access_token}` },
+      });
     } catch (error) {
-        console.error("Error fetching user:", error);
-        throw new Error("No se pudo conectar con el servidor para obtener los datos del usuario.");
+      console.error("Error fetching user:", error);
+      throw new Error("Token - No se pudo conectar con el servidor para obtener los datos del usuario.");
     }
 
     if (!userResponse.ok) {
-        const errorBody = await userResponse.text();
-        console.error("Fetch user failed:", errorBody)
-        throw new Error('No se pudieron obtener los datos del usuario desde el servidor.');
+      const errorBody = await userResponse.text();
+      console.error("Fetch user failed:", errorBody)
+      throw new Error('No se pudieron obtener los datos del usuario desde el servidor.');
     }
 
     const userData: User = await userResponse.json();
