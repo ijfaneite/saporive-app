@@ -1,18 +1,23 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { User, Asesor, Token } from '@/lib/types';
-import { API_BASE_URL, API_ROUTES } from '@/lib/config'; // Ajusta según tu ruta en FastAPI
+import { User, Asesor, Token, Cliente, Producto } from '@/lib/types';
+import { API_BASE_URL, API_ROUTES } from '@/lib/config';
+import { useToast } from '@/hooks/use-toast';
 
 interface AuthContextType {
   user: User | null;
   token: string | null;
   asesor: Asesor | null;
+  clients: Cliente[];
+  products: Producto[];
   login: (username: string, password: string) => Promise<void>;
   logout: () => void;
   setAsesor: (asesor: Asesor) => void;
+  syncData: () => Promise<void>;
   isLoading: boolean;
+  isSyncing: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -35,19 +40,27 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [asesor, setAsesorState] = useState<Asesor | null>(null);
+  const [clients, setClients] = useState<Cliente[]>([]);
+  const [products, setProducts] = useState<Producto[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isSyncing, setIsSyncing] = useState(false);
   const router = useRouter();
+  const { toast } = useToast();
 
   useEffect(() => {
     try {
       const storedToken = document.cookie.split('; ').find(row => row.startsWith('auth_token='))?.split('=')[1];
       const storedUser = localStorage.getItem('user');
       const storedAsesor = localStorage.getItem('asesor');
+      const storedClients = localStorage.getItem('clients');
+      const storedProducts = localStorage.getItem('products');
 
       if (storedToken) {
         setToken(storedToken);
         if (storedUser) setUser(JSON.parse(storedUser));
         if (storedAsesor) setAsesorState(JSON.parse(storedAsesor));
+        if (storedClients) setClients(JSON.parse(storedClients));
+        if (storedProducts) setProducts(JSON.parse(storedProducts));
       }
     } catch (error) {
       console.error("Failed to load auth state from storage", error);
@@ -56,66 +69,97 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   }, []);
 
+  const syncData = useCallback(async () => {
+    if (!token) {
+        toast({
+            variant: "destructive",
+            title: "Error de autenticación",
+            description: "No se puede sincronizar sin un token válido.",
+          });
+        return;
+    };
+    setIsSyncing(true);
+    try {
+        const [clientesRes, productosRes] = await Promise.all([
+            fetch(`${API_BASE_URL}${API_ROUTES.clientes}`, { headers: { Authorization: `Bearer ${token}` } }),
+            fetch(`${API_BASE_URL}${API_ROUTES.productos}`, { headers: { Authorization: `Bearer ${token}` } }),
+        ]);
+
+        if (!clientesRes.ok) throw new Error('No se pudieron cargar los clientes');
+        const clientesData: Cliente[] = await clientesRes.json();
+        setClients(clientesData);
+        localStorage.setItem('clients', JSON.stringify(clientesData));
+
+        if (!productosRes.ok) throw new Error('No se pudo cargar la lista de precios');
+        const productosData: Producto[] = await productosRes.json();
+        setProducts(productosData);
+        localStorage.setItem('products', JSON.stringify(productosData));
+
+    } catch (error) {
+        toast({
+            variant: "destructive",
+            title: "Error de Sincronización",
+            description: error instanceof Error ? error.message : "No se pudieron cargar los datos.",
+          });
+    } finally {
+        setIsSyncing(false);
+    }
+}, [token, toast]);
+
   const login = async (username: string, password: string) => {
     let response;
-
     try {
-      response = await fetch(`${API_BASE_URL}${API_ROUTES.token}`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded",
-          "Accept": "application/json"
-        },
-        body: new URLSearchParams({
-          grant_type: "password",
-          username: username,
-          password: password,
-          client_id: "string",
-          scope: "scope",
-          client_secret: "********"
-        })
-      });
+        response = await fetch(`${API_BASE_URL}${API_ROUTES.token}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'Accept': 'application/json' },
+            body: new URLSearchParams({
+                grant_type: '',
+                username: username,
+                password: password,
+                scope: '',
+                client_id: '',
+                client_secret: ''
+            })
+        });
     } catch (error) {
-      throw new Error("Login - No se pudo conectar al servidor de autenticación. ");
+        throw new Error("Login - No se pudo conectar al servidor de autenticación.");
     }
-
+    
     if (!response.ok) {
-      const errorBody = await response.json();
-      const errorMessage = errorBody.detail || 'Usuario o clave incorrectos.';
-      throw new Error(errorMessage);
+        const errorBody = await response.json().catch(() => ({ detail: 'Usuario o clave incorrectos.' }));
+        throw new Error(errorBody.detail || 'Usuario o clave incorrectos.');
     }
 
-    const { access_token, token_type } = await response.json();
-
+    const { access_token } = await response.json();
+    setToken(access_token);
+    setCookie('auth_token', access_token, 7);
+    
     // Give the server a moment to process the token
     await new Promise(resolve => setTimeout(resolve, 500));
 
-    setToken(access_token);
-    setCookie('auth_token', access_token, 7);
-
     let userResponse;
     try {
-      userResponse = await fetch(`${API_BASE_URL}${API_ROUTES.me}`, {
-        //headers: { Authorization: `Bearer ${access_token}` },
-        method: "GET",
-        headers: {
-          "Authorization": `Bearer ${access_token}`,
-          "Accept": "application/json"
-        }
-      });
+        userResponse = await fetch(`${API_BASE_URL}${API_ROUTES.me}`, {
+            method: 'GET',
+            headers: { 'Authorization': `Bearer ${access_token}`, 'Accept': 'application/json' }
+        });
     } catch (error) {
-      console.error("Error fetching user:", error);
-      throw new Error("Token - No se pudo conectar con el servidor para obtener los datos del usuario.");
+        console.error("Error fetching user:", error);
+        throw new Error("Token - No se pudo conectar con el servidor para obtener los datos del usuario.");
     }
 
     if (!userResponse.ok) {
-      const errorBody = await userResponse.text();
-      throw new Error('No se pudieron obtener los datos del usuario desde el servidor.');
+        const errorBody = await userResponse.text();
+        console.error("Fetch user failed:", errorBody)
+        throw new Error('No se pudieron obtener los datos del usuario desde el servidor.');
     }
 
     const userData: User = await userResponse.json();
     setUser(userData);
     localStorage.setItem('user', JSON.stringify(userData));
+
+    await syncData();
+
     router.push('/pedidos');
     router.refresh();
   };
@@ -124,9 +168,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setUser(null);
     setToken(null);
     setAsesorState(null);
+    setClients([]);
+    setProducts([]);
     eraseCookie('auth_token');
     localStorage.removeItem('user');
     localStorage.removeItem('asesor');
+    localStorage.removeItem('clients');
+    localStorage.removeItem('products');
     router.push('/login');
   };
 
@@ -136,7 +184,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, token, asesor, login, logout, setAsesor, isLoading }}>
+    <AuthContext.Provider value={{ user, token, asesor, clients, products, login, logout, setAsesor, syncData, isLoading, isSyncing }}>
       {children}
     </AuthContext.Provider>
   );

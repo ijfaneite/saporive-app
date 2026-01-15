@@ -23,23 +23,22 @@ import {
     AlertDialogTitle,
     AlertDialogTrigger,
   } from "@/components/ui/alert-dialog"
+import { cn } from "@/lib/utils";
 
 export default function ConfiguracionPage() {
-  const { logout, user, asesor } = useAuth();
+  const { logout, syncData, isSyncing } = useAuth();
   const { toast } = useToast();
 
-  const handleSync = () => {
+  const handleSync = async () => {
     toast({
       title: "Sincronización iniciada",
       description: "Los datos se están actualizando en segundo plano.",
     });
-    // Placeholder for actual sync logic
-    setTimeout(() => {
-        toast({
-            title: "Sincronización completada",
-            description: "Todos los datos están al día.",
-          });
-    }, 3000)
+    await syncData();
+    toast({
+        title: "Sincronización completada",
+        description: "Todos los datos están al día.",
+      });
   };
 
   return (
@@ -62,9 +61,9 @@ export default function ConfiguracionPage() {
             <CardDescription>Sincronice los datos para obtener la información más reciente.</CardDescription>
         </CardHeader>
         <CardContent>
-            <Button variant="outline" className="w-full" onClick={handleSync}>
-                <RefreshCw className="mr-2 h-4 w-4" />
-                Sincronizar Datos
+            <Button variant="outline" className="w-full" onClick={handleSync} disabled={isSyncing}>
+                <RefreshCw className={cn("mr-2 h-4 w-4", isSyncing && "animate-spin")} />
+                {isSyncing ? "Sincronizando..." : "Sincronizar Datos"}
             </Button>
         </CardContent>
       </Card>

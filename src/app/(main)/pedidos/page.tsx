@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/lib/auth';
-import { Pedido, Cliente } from '@/lib/types';
+import { Pedido } from '@/lib/types';
 import { API_BASE_URL, API_ROUTES } from '@/lib/config';
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -16,39 +16,30 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 
 export default function PedidosPage() {
-  const { token, asesor } = useAuth();
+  const { token, asesor, clients } = useAuth();
   const [pedidos, setPedidos] = useState<Pedido[]>([]);
-  const [clientes, setClientes] = useState<Cliente[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
 
-  const fetchPedidosAndClientes = useCallback(async () => {
+  const fetchPedidos = useCallback(async () => {
     if (!token || !asesor) {
       return;
     }
     setIsLoading(true);
     try {
-      const [pedidosRes, clientesRes] = await Promise.all([
-        fetch(`${API_BASE_URL}${API_ROUTES.pedidos}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        }),
-        fetch(`${API_BASE_URL}${API_ROUTES.clientes}`, {
-            headers: { Authorization: `Bearer ${token}` },
-        })
-      ]);
+      const pedidosRes = await fetch(`${API_BASE_URL}${API_ROUTES.pedidos}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
 
       if (!pedidosRes.ok) throw new Error('No se pudieron cargar los pedidos');
-      if (!clientesRes.ok) throw new Error('No se pudieron cargar los clientes');
       
       const pedidosData: Pedido[] = await pedidosRes.json();
-      const clientesData: Cliente[] = await clientesRes.json();
 
       const asesorPedidos = pedidosData
         .filter(p => p.idAsesor === asesor.idAsesor)
         .sort((a, b) => new Date(b.fechaPedido).getTime() - new Date(a.fechaPedido).getTime());
 
       setPedidos(asesorPedidos);
-      setClientes(clientesData);
 
     } catch (error) {
       toast({
@@ -62,11 +53,11 @@ export default function PedidosPage() {
   }, [token, asesor, toast]);
   
   useEffect(() => {
-    fetchPedidosAndClientes();
-  }, [fetchPedidosAndClientes]);
+    fetchPedidos();
+  }, [fetchPedidos]);
 
   const getClienteName = (idCliente: string) => {
-    const cliente = clientes.find(c => c.idCliente === idCliente);
+    const cliente = clients.find(c => c.idCliente === idCliente);
     return cliente ? cliente.Cliente : `ID: ${idCliente.slice(0, 8)}`;
   };
 
@@ -87,7 +78,7 @@ export default function PedidosPage() {
       <div className="flex justify-between items-center flex-shrink-0">
         <h1 className="text-3xl font-bold font-headline text-primary">Pedidos</h1>
         <div className="flex gap-2">
-            <Button variant="outline" size="icon" onClick={fetchPedidosAndClientes} disabled={isLoading}>
+            <Button variant="outline" size="icon" onClick={fetchPedidos} disabled={isLoading}>
                 <RefreshCw className={cn(isLoading && 'animate-spin')}/>
             </Button>
             <Link href="/pedidos/nuevo" passHref>

@@ -1,10 +1,8 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '@/lib/auth';
 import { Producto } from '@/lib/types';
-import { API_BASE_URL, API_ROUTES } from '@/lib/config';
-import { useToast } from "@/hooks/use-toast";
 import {
   Table,
   TableBody,
@@ -17,45 +15,16 @@ import { Loader2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 
 export default function PreciosPage() {
-  const { token } = useAuth();
-  const [productos, setProductos] = useState<Producto[]>([]);
-  const [filteredProductos, setFilteredProductos] = useState<Producto[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const { products, isLoading: isAuthLoading } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
-  const { toast } = useToast();
 
-  useEffect(() => {
-    const fetchProductos = async () => {
-      if (!token) return;
-      setIsLoading(true);
-      try {
-        const response = await fetch(`${API_BASE_URL}${API_ROUTES.productos}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (!response.ok) throw new Error('Failed to fetch productos');
-        const data: Producto[] = await response.json();
-        setProductos(data);
-        setFilteredProductos(data);
-      } catch (error) {
-        toast({
-          variant: "destructive",
-          title: "Error",
-          description: "No se pudo cargar la lista de precios.",
-        });
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    fetchProductos();
-  }, [token, toast]);
-
-  useEffect(() => {
-    const results = productos.filter(producto =>
-      producto.Producto.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredProductos = useMemo(() => {
+    if (!searchTerm) return products;
+    return products.filter(producto =>
+        producto.Producto.toLowerCase().includes(searchTerm.toLowerCase())
     );
-    setFilteredProductos(results);
-  }, [searchTerm, productos]);
-
+  }, [searchTerm, products]);
+  
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('es-VE', { style: 'currency', currency: 'VES' }).format(value);
   }
@@ -69,7 +38,7 @@ export default function PreciosPage() {
         onChange={(e) => setSearchTerm(e.target.value)}
       />
       <div className="border rounded-lg">
-        {isLoading ? (
+        {isAuthLoading ? (
           <div className="flex items-center justify-center h-64">
             <Loader2 className="w-8 h-8 animate-spin text-primary" />
           </div>
