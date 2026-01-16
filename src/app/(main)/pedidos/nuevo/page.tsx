@@ -149,6 +149,7 @@ export default function NuevoPedidoPage() {
       idCliente: selectedClientId,
       idEmpresa: parseInt(selectedEmpresa.idEmpresa, 10),
       detalles: lineasPedido.map(linea => ({
+        idPedido: idPedidoGenerado,
         idProducto: linea.producto.idProducto,
         Precio: linea.producto.Precio,
         Cantidad: parseInt(linea.cantidad, 10) || 1,
