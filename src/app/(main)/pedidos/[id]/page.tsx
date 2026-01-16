@@ -54,12 +54,15 @@ export default function EditarPedidoPage() {
         
         const lineas = data.detalles.map(detalle => {
             const producto = products.find(p => p.idProducto === detalle.idProducto);
-            if (!producto) return null;
             return {
-              producto: producto,
+              producto: producto || { 
+                  idProducto: detalle.idProducto, 
+                  Producto: `(No disponible) ID: ${detalle.idProducto}`, 
+                  Precio: detalle.Precio 
+                },
               cantidad: String(detalle.Cantidad),
             };
-        }).filter((linea): linea is LineaPedido => linea !== null);
+        });
 
         setLineasPedido(lineas);
 
@@ -172,10 +175,10 @@ export default function EditarPedidoPage() {
     
     const pedidoPayload = {
       idPedido: pedido.idPedido,
-      fechaPedido: new Date().toISOString(), // Or keep original date: pedido.fechaPedido
+      fechaPedido: pedido.fechaPedido,
       totalPedido: totalPedido,
       idAsesor: asesor.idAsesor,
-      Status: pedido.Status, // Keep original status or allow changing it
+      Status: pedido.Status,
       idCliente: selectedClientId,
       idEmpresa: parseInt(selectedEmpresa.idEmpresa, 10),
       detalles: lineasPedido.map(linea => ({
@@ -363,7 +366,9 @@ export default function EditarPedidoPage() {
                 {lineasPedido.map(linea => (
                   <TableRow key={linea.producto.idProducto}>
                     <TableCell>
-                        <div className="font-medium">{linea.producto.Producto}</div>
+                        <div className={cn("font-medium", linea.producto.Producto.startsWith('(No disponible)') && 'text-destructive')}>
+                            {linea.producto.Producto}
+                        </div>
                         <div className="text-sm text-muted-foreground">{formatCurrency(linea.producto.Precio)} c/u</div>
                     </TableCell>
                     <TableCell>
