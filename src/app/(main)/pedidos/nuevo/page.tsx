@@ -153,7 +153,6 @@ export default function NuevoPedidoPage() {
         idProducto: linea.producto.idProducto,
         Precio: linea.producto.Precio,
         Cantidad: parseInt(linea.cantidad, 10) || 1,
-        Total: linea.producto.Precio * (parseInt(linea.cantidad, 10) || 1),
       })),
     };
 

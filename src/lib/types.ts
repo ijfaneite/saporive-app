@@ -37,24 +37,6 @@ export interface Cliente {
   updatedBy?: string;
 }
 
-export interface Pedido {
-  idPedido: string;
-  idEmpresa: number;
-  fechaPedido: string;
-  totalPedido: number;
-  idAsesor: string;
-  Status: string;
-  idCliente: string;
-  Rif?: string;
-  detalles: DetallePedido[];
-  asesor?: Asesor;
-  cliente?: Cliente;
-  createdAt: string;
-  updatedAt: string;
-  createdBy: string;
-  updatedBy: string;
-}
-
 export interface DetallePedido {
   id: string;
   idPedido: string;
@@ -63,6 +45,23 @@ export interface DetallePedido {
   Cantidad: number;
   Total: number;
   producto?: Producto;
+  createdAt: string;
+  updatedAt: string;
+  createdBy: string;
+  updatedBy: string;
+}
+
+export interface Pedido {
+  idPedido: string;
+  idEmpresa: number;
+  fechaPedido: string;
+  totalPedido: number;
+  idAsesor: string;
+  Status: string;
+  idCliente: string;
+  detalles: DetallePedido[];
+  asesor?: Asesor;
+  cliente?: Cliente;
   createdAt: string;
   updatedAt: string;
   createdBy: string;
