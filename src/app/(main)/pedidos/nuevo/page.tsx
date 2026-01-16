@@ -22,7 +22,7 @@ type LineaPedido = {
 };
 
 export default function NuevoPedidoPage() {
-  const { token, asesor, clients, products, selectedEmpresa, updateEmpresa } = useAuth();
+  const { token, asesor, clients, products, selectedEmpresa, updateEmpresa } from useAuth();
   const router = useRouter();
   const { toast } = useToast();
 
@@ -172,8 +172,7 @@ export default function NuevoPedidoPage() {
       }
 
       if (selectedEmpresa) {
-        const newEmpresa = { ...selectedEmpresa, idPedido: selectedEmpresa.idPedido + 1 };
-        await updateEmpresa(newEmpresa);
+        await updateEmpresa(selectedEmpresa);
       }
       
       toast({
@@ -370,5 +369,3 @@ export default function NuevoPedidoPage() {
     </div>
   );
 }
-
-    

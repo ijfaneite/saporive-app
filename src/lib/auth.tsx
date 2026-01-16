@@ -265,12 +265,50 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const updateEmpresa = async (empresa: Empresa) => {
-    console.log(`Simulating update for idPedido for ${empresa.RazonSocial} to ${empresa.idPedido}`);
-    const updatedEmpresas = empresas.map(e => e.idEmpresa === empresa.idEmpresa ? empresa : e);
-    setEmpresas(updatedEmpresas);
-    localStorage.setItem('empresas', JSON.stringify(updatedEmpresas));
-    if (selectedEmpresa?.idEmpresa === empresa.idEmpresa) {
-        setEmpresa(empresa);
+    if (!token) {
+        toast({
+            variant: "destructive",
+            title: "Error de autenticación",
+            description: "No se puede actualizar la empresa sin un token válido.",
+        });
+        return;
+    }
+    try {
+        const response = await fetch(`${API_BASE_URL}/empresas/pedidos/${empresa.idEmpresa}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify(empresa),
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.detail || 'No se pudo actualizar el contador de pedidos.');
+        }
+
+        const updatedEmpresa: Empresa = await response.json();
+        
+        const formattedUpdatedEmpresa = {
+            ...updatedEmpresa,
+            idEmpresa: String(updatedEmpresa.idEmpresa),
+        };
+
+        const updatedEmpresas = empresas.map(e => e.idEmpresa === formattedUpdatedEmpresa.idEmpresa ? formattedUpdatedEmpresa : e);
+        setEmpresas(updatedEmpresas);
+        localStorage.setItem('empresas', JSON.stringify(updatedEmpresas));
+        
+        if (selectedEmpresa?.idEmpresa === formattedUpdatedEmpresa.idEmpresa) {
+            setEmpresa(formattedUpdatedEmpresa);
+        }
+
+    } catch (error) {
+        toast({
+            variant: "destructive",
+            title: "Error al actualizar empresa",
+            description: error instanceof Error ? error.message : "Ocurrió un error inesperado.",
+        });
     }
   };
 
