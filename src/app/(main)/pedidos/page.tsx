@@ -137,25 +137,31 @@ export default function PedidosPage() {
                         <CardHeader>
                             <div className="flex justify-between items-start gap-2">
                                 <div className='flex-grow min-w-0'>
-                                    <CardTitle className="text-lg truncate" title={getClienteName(pedido.idCliente)}>{getClienteName(pedido.idCliente)}</CardTitle>
-                                    <CardDescription>
-                                        {format(new Date(pedido.fechaPedido), "dd MMM yyyy, HH:mm", { locale: es })}
-                                    </CardDescription>
+                                    <CardTitle className="text-lg font-semibold" title={pedido.idPedido}>
+                                        {pedido.idPedido}
+                                    </CardTitle>
+                                    <p className="text-sm text-muted-foreground truncate" title={getClienteName(pedido.idCliente)}>
+                                        {getClienteName(pedido.idCliente)}
+                                    </p>
                                 </div>
                                 <div className="flex items-center flex-shrink-0 gap-1">
-                                    <Badge variant={getStatusVariant(pedido.Status)} className="whitespace-nowrap">{pedido.Status}</Badge>
-                                    <Link href={`/pedidos/${pedido.idPedido}`} passHref>
-                                        <Button variant="ghost" size="icon" aria-label="Editar Pedido">
-                                            <Pencil className="h-4 w-4" />
-                                        </Button>
-                                    </Link>
+                                    <Badge variant={getStatusVariant(pedido.Status)} className="whitespace-nowrap text-xs">{pedido.Status}</Badge>
                                 </div>
                             </div>
                         </CardHeader>
                         <CardContent>
                             <div className="flex justify-between items-end">
-                                <p className="text-sm text-muted-foreground">ID: {pedido.idPedido.substring(0,8)}...</p>
-                                <p className="text-lg font-bold text-right text-primary">{formatCurrency(pedido.totalPedido)}</p>
+                                <div>
+                                    <p className="text-sm text-muted-foreground">
+                                        {format(new Date(pedido.fechaPedido), "dd MMM yyyy, HH:mm", { locale: es })}
+                                    </p>
+                                    <p className="text-lg font-bold text-primary">{formatCurrency(pedido.totalPedido)}</p>
+                                </div>
+                                <Link href={`/pedidos/${pedido.idPedido}`} passHref>
+                                    <Button variant="outline" size="icon" aria-label="Editar Pedido">
+                                        <Pencil className="h-4 w-4" />
+                                    </Button>
+                                </Link>
                             </div>
                         </CardContent>
                     </Card>

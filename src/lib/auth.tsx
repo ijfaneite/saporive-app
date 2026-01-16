@@ -131,11 +131,31 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }));
         setEmpresas(formattedEmpresas);
         localStorage.setItem('empresas', JSON.stringify(formattedEmpresas));
+        
+        const localEmpresa = localStorage.getItem('empresa');
+        if(localEmpresa) {
+          const parsedEmpresa = JSON.parse(localEmpresa) as Empresa;
+          const freshEmpresa = formattedEmpresas.find(e => e.idEmpresa === parsedEmpresa.idEmpresa);
+          if (freshEmpresa) {
+            setSelectedEmpresaState(freshEmpresa);
+            localStorage.setItem('empresa', JSON.stringify(freshEmpresa));
+          }
+        }
 
         if (!asesoresRes.ok) throw new Error('No se pudieron cargar los asesores');
         const asesoresData: Asesor[] = await asesoresRes.json();
         setAsesores(asesoresData);
         localStorage.setItem('asesores', JSON.stringify(asesoresData));
+
+        const localAsesor = localStorage.getItem('asesor');
+        if(localAsesor) {
+          const parsedAsesor = JSON.parse(localAsesor) as Asesor;
+          const freshAsesor = asesoresData.find(a => a.idAsesor === parsedAsesor.idAsesor);
+          if (freshAsesor) {
+            setAsesorState(freshAsesor);
+            localStorage.setItem('asesor', JSON.stringify(freshAsesor));
+          }
+        }
 
     } catch (error) {
         toast({
