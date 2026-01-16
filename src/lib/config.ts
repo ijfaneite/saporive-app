@@ -10,4 +10,5 @@ export const API_ROUTES = {
   pedidos: '/pedidos/',
   detallesPedidos: '/detalles-pedidos/',
   empresas: '/empresas/',
+  updateEmpresaPedido: '/empresas/pedidos/',
 };

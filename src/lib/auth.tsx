@@ -27,20 +27,6 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-function setCookie(name: string, value: string, days: number) {
-  let expires = "";
-  if (days) {
-    const date = new Date();
-    date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
-    expires = "; expires=" + date.toUTCString();
-  }
-  document.cookie = name + "=" + (value || "") + expires + "; path=/";
-}
-
-function eraseCookie(name: string) {
-  document.cookie = name + '=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;';
-}
-
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
@@ -57,7 +43,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     try {
-      const storedToken = document.cookie.split('; ').find(row => row.startsWith('auth_token='))?.split('=')[1];
+      const storedToken = localStorage.getItem('auth_token');
       const storedUser = localStorage.getItem('user');
       const storedAsesor = localStorage.getItem('asesor');
       const storedAsesores = localStorage.getItem('asesores');
@@ -81,6 +67,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 const found = parsedEmpresas.find(e => e.idEmpresa === parsedSelected.idEmpresa);
                 if (found) {
                      setSelectedEmpresaState(found);
+                } else {
+                    localStorage.removeItem('empresa');
                 }
             }
         }
@@ -194,7 +182,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     const { access_token } = await response.json();
     setToken(access_token);
-    setCookie('auth_token', access_token, 7);
+    localStorage.setItem('auth_token', access_token);
     
     let userResponse;
     try {
@@ -243,7 +231,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setProducts([]);
     setEmpresas([]);
     setSelectedEmpresaState(null);
-    eraseCookie('auth_token');
+    localStorage.removeItem('auth_token');
     localStorage.removeItem('user');
     localStorage.removeItem('asesor');
     localStorage.removeItem('asesores');
@@ -274,7 +262,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         return;
     }
     try {
-        const response = await fetch(`${API_BASE_URL}/empresas/pedidos/${empresa.idEmpresa}`, {
+        const response = await fetch(`${API_BASE_URL}${API_ROUTES.updateEmpresaPedido}${empresa.idEmpresa}`, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
@@ -288,11 +276,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             throw new Error(errorData.detail || 'No se pudo actualizar el contador de pedidos.');
         }
 
-        const updatedEmpresa: Empresa = await response.json();
+        const updatedEmpresaData: Empresa = await response.json();
         
         const formattedUpdatedEmpresa = {
-            ...updatedEmpresa,
-            idEmpresa: String(updatedEmpresa.idEmpresa),
+            ...updatedEmpresaData,
+            idEmpresa: String(updatedEmpresaData.idEmpresa),
         };
 
         const updatedEmpresas = empresas.map(e => e.idEmpresa === formattedUpdatedEmpresa.idEmpresa ? formattedUpdatedEmpresa : e);
