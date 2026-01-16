@@ -1,25 +1,27 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useAuth } from '@/lib/auth';
 import { Pedido } from '@/lib/types';
 import { API_BASE_URL, API_ROUTES } from '@/lib/config';
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { PlusCircle, Loader2, RefreshCw } from "lucide-react";
+import { PlusCircle, Loader2, RefreshCw, Pencil } from "lucide-react";
 import Link from 'next/link';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
+import { Input } from '@/components/ui/input';
 
 export default function PedidosPage() {
   const { token, asesor, clients } = useAuth();
   const [pedidos, setPedidos] = useState<Pedido[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
+  const [searchTerm, setSearchTerm] = useState('');
 
   const fetchPedidos = useCallback(async () => {
     if (!token || !asesor) {
@@ -56,10 +58,27 @@ export default function PedidosPage() {
     fetchPedidos();
   }, [fetchPedidos]);
 
-  const getClienteName = (idCliente: string) => {
+  const getClienteName = useCallback((idCliente: string) => {
     const cliente = clients.find(c => c.idCliente === idCliente);
     return cliente ? cliente.Cliente : `ID: ${idCliente.slice(0, 8)}`;
-  };
+  }, [clients]);
+
+  const filteredPedidos = useMemo(() => {
+    return pedidos.filter(pedido => {
+        if (!searchTerm) return true;
+        const lowerCaseSearch = searchTerm.toLowerCase();
+
+        const clienteName = getClienteName(pedido.idCliente).toLowerCase();
+        if (clienteName.includes(lowerCaseSearch)) return true;
+
+        if (pedido.idPedido.toLowerCase().includes(lowerCaseSearch)) return true;
+        
+        const fecha = format(new Date(pedido.fechaPedido), "dd MMM yyyy", { locale: es }).toLowerCase();
+        if (fecha.includes(lowerCaseSearch)) return true;
+        
+        return false;
+    });
+  }, [pedidos, searchTerm, getClienteName]);
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('es-VE', { style: 'currency', currency: 'VES' }).format(value);
@@ -90,13 +109,19 @@ export default function PedidosPage() {
         </div>
       </div>
 
+      <Input 
+        placeholder="Buscar por cliente, ID o fecha..."
+        value={searchTerm}
+        onChange={(e) => setSearchTerm(e.target.value)}
+      />
+
       {isLoading ? (
         <div className="flex-grow flex justify-center items-center">
             <Loader2 className="w-8 h-8 animate-spin text-primary" />
         </div>
-      ) : pedidos.length === 0 ? (
+      ) : filteredPedidos.length === 0 ? (
         <div className="flex-grow flex flex-col justify-center items-center text-center py-10 border-2 border-dashed rounded-lg">
-          <p className="text-muted-foreground mb-4">No hay pedidos recientes.</p>
+          <p className="text-muted-foreground mb-4">{searchTerm ? 'No se encontraron pedidos con ese criterio.' : 'No hay pedidos recientes.'}</p>
           <Link href="/pedidos/nuevo" passHref>
               <Button>
                   <PlusCircle className="mr-2 h-4 w-4" />
@@ -107,7 +132,7 @@ export default function PedidosPage() {
       ) : (
         <ScrollArea className="flex-grow -mr-4">
             <div className="space-y-4 pr-4">
-                {pedidos.map(pedido => (
+                {filteredPedidos.map(pedido => (
                     <Card key={pedido.idPedido}>
                         <CardHeader>
                             <div className="flex justify-between items-start gap-2">
@@ -117,7 +142,14 @@ export default function PedidosPage() {
                                         {format(new Date(pedido.fechaPedido), "dd MMM yyyy, HH:mm", { locale: es })}
                                     </CardDescription>
                                 </div>
-                                <Badge variant={getStatusVariant(pedido.Status)} className="whitespace-nowrap flex-shrink-0">{pedido.Status}</Badge>
+                                <div className="flex items-center flex-shrink-0 gap-1">
+                                    <Badge variant={getStatusVariant(pedido.Status)} className="whitespace-nowrap">{pedido.Status}</Badge>
+                                    <Link href={`/pedidos/${pedido.idPedido}`} passHref>
+                                        <Button variant="ghost" size="icon" aria-label="Editar Pedido">
+                                            <Pencil className="h-4 w-4" />
+                                        </Button>
+                                    </Link>
+                                </div>
                             </div>
                         </CardHeader>
                         <CardContent>
