@@ -28,7 +28,7 @@ export function EmpresaSelector({ onEmpresaSelected }: EmpresaSelectorProps) {
       setEmpresa(selected);
       toast({
         title: "Empresa guardada",
-        description: `La empresa por defecto es ahora ${selected.nombre}.`,
+        description: `La empresa por defecto es ahora ${selected.RazonSocial}.`,
       });
       if (onEmpresaSelected) {
         onEmpresaSelected();
@@ -52,7 +52,7 @@ export function EmpresaSelector({ onEmpresaSelected }: EmpresaSelectorProps) {
                 <SelectContent>
                     {empresas.map((empresa) => (
                     <SelectItem key={empresa.idEmpresa} value={empresa.idEmpresa}>
-                        {empresa.nombre}
+                        {empresa.RazonSocial}
                     </SelectItem>
                     ))}
                 </SelectContent>

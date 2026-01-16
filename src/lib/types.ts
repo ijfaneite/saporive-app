@@ -50,6 +50,7 @@ export interface Token {
 
 export interface Empresa {
   idEmpresa: string;
-  nombre: string;
-  proximoIdPedido: number;
+  RazonSocial: string;
+  idPedido: number;
+  idRecibo: number;
 }

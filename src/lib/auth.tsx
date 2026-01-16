@@ -60,13 +60,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const storedAsesor = localStorage.getItem('asesor');
       const storedClients = localStorage.getItem('clients');
       const storedProducts = localStorage.getItem('products');
+      const storedEmpresas = localStorage.getItem('empresas');
       const storedEmpresa = localStorage.getItem('empresa');
-      
-      const mockEmpresas: Empresa[] = [
-        { idEmpresa: '1', nombre: 'Sapori D Italia, C.A.', proximoIdPedido: 453 },
-        { idEmpresa: '2', nombre: 'Inversiones Gaea, C.A.', proximoIdPedido: 101 },
-      ];
-      setEmpresas(mockEmpresas);
 
       if (storedToken) {
         setToken(storedToken);
@@ -74,11 +69,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         if (storedAsesor) setAsesorState(JSON.parse(storedAsesor));
         if (storedClients) setClients(JSON.parse(storedClients));
         if (storedProducts) setProducts(JSON.parse(storedProducts));
-        if (storedEmpresa) {
-            const parsed = JSON.parse(storedEmpresa);
-            const found = mockEmpresas.find(e => e.idEmpresa === parsed.idEmpresa);
-            if (found) {
-                 setSelectedEmpresaState(found);
+        if (storedEmpresas) {
+            const parsedEmpresas = JSON.parse(storedEmpresas) as Empresa[];
+            setEmpresas(parsedEmpresas);
+            if (storedEmpresa) {
+                const parsedSelected = JSON.parse(storedEmpresa) as Empresa;
+                const found = parsedEmpresas.find(e => e.idEmpresa === parsedSelected.idEmpresa);
+                if (found) {
+                     setSelectedEmpresaState(found);
+                }
             }
         }
       }
@@ -100,9 +99,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     };
     setIsSyncing(true);
     try {
-        const [clientesRes, productosRes] = await Promise.all([
+        const [clientesRes, productosRes, empresasRes] = await Promise.all([
             fetch(`${API_BASE_URL}${API_ROUTES.clientes}`, { headers: { Authorization: `Bearer ${token}` } }),
             fetch(`${API_BASE_URL}${API_ROUTES.productos}`, { headers: { Authorization: `Bearer ${token}` } }),
+            fetch(`${API_BASE_URL}${API_ROUTES.empresas}`, { headers: { Authorization: `Bearer ${token}` } }),
         ]);
 
         if (!clientesRes.ok) throw new Error('No se pudieron cargar los clientes');
@@ -114,6 +114,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const productosData: Producto[] = await productosRes.json();
         setProducts(productosData);
         localStorage.setItem('products', JSON.stringify(productosData));
+
+        if (!empresasRes.ok) throw new Error('No se pudieron cargar las empresas');
+        const empresasData = await empresasRes.json();
+        const formattedEmpresas: Empresa[] = empresasData.map((e: any) => ({
+            RazonSocial: e.RazonSocial,
+            idPedido: e.idPedido,
+            idRecibo: e.idRecibo,
+            idEmpresa: String(e.idEmpresa),
+        }));
+        setEmpresas(formattedEmpresas);
+        localStorage.setItem('empresas', JSON.stringify(formattedEmpresas));
 
     } catch (error) {
         toast({
@@ -189,12 +200,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setAsesorState(null);
     setClients([]);
     setProducts([]);
+    setEmpresas([]);
     setSelectedEmpresaState(null);
     eraseCookie('auth_token');
     localStorage.removeItem('user');
     localStorage.removeItem('asesor');
     localStorage.removeItem('clients');
     localStorage.removeItem('products');
+    localStorage.removeItem('empresas');
     localStorage.removeItem('empresa');
     router.push('/login');
   };
@@ -210,9 +223,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const updateEmpresa = async (empresa: Empresa) => {
-    console.log(`Simulating PATCH to update proximoIdPedido for ${empresa.nombre} to ${empresa.proximoIdPedido}`);
+    console.log(`Simulating update for idPedido for ${empresa.RazonSocial} to ${empresa.idPedido}`);
     const updatedEmpresas = empresas.map(e => e.idEmpresa === empresa.idEmpresa ? empresa : e);
     setEmpresas(updatedEmpresas);
+    localStorage.setItem('empresas', JSON.stringify(updatedEmpresas));
     if (selectedEmpresa?.idEmpresa === empresa.idEmpresa) {
         setEmpresa(empresa);
     }

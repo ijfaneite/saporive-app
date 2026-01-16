@@ -24,7 +24,7 @@ export function Header() {
         )}
       </div>
       <div className="font-semibold text-center truncate flex-grow text-lg">
-        {selectedEmpresa?.nombre || 'Seleccione Empresa'}
+        {selectedEmpresa?.RazonSocial || 'Seleccione Empresa'}
       </div>
       <div className="flex items-center justify-end gap-3 text-xs w-1/4">
         <span className='truncate'>{user?.username || 'Usuario'}</span>

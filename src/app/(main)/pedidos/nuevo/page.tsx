@@ -37,7 +37,7 @@ export default function NuevoPedidoPage() {
         const year = date.getFullYear();
         const month = String(date.getMonth() + 1).padStart(2, '0');
         const day = String(date.getDate()).padStart(2, '0');
-        const nextId = String(selectedEmpresa.proximoIdPedido).padStart(3, '0');
+        const nextId = String(selectedEmpresa.idPedido).padStart(3, '0');
         setIdPedidoGenerado(`${year}${month}${day}-${nextId}`);
     } else {
         setIdPedidoGenerado('Seleccione una empresa');
@@ -83,19 +83,23 @@ export default function NuevoPedidoPage() {
   };
 
   const handleUpdateCantidad = (idProducto: string, cantidad: string) => {
-    setLineasPedido(currentLineas =>
-      currentLineas.map(linea =>
-        linea.producto.idProducto === idProducto ? { ...linea, cantidad: cantidad } : linea
-      )
-    );
+    if (cantidad === '' || (parseInt(cantidad) > 0)) {
+        setLineasPedido(currentLineas =>
+          currentLineas.map(linea =>
+            linea.producto.idProducto === idProducto ? { ...linea, cantidad: cantidad } : linea
+          )
+        );
+    }
   };
   
   const handleCantidadBlur = (idProducto: string, value: string) => {
     const num = parseInt(value, 10);
     if (isNaN(num) || num < 1) {
-        handleUpdateCantidad(idProducto, "1");
-    } else {
-        handleUpdateCantidad(idProducto, String(num));
+        setLineasPedido(currentLineas =>
+            currentLineas.map(linea =>
+              linea.producto.idProducto === idProducto ? { ...linea, cantidad: "1" } : linea
+            )
+          );
     }
   }
 
@@ -121,8 +125,8 @@ export default function NuevoPedidoPage() {
       toast({ variant: "destructive", title: "Faltan datos", description: "Por favor, seleccione un cliente." });
       return;
     }
-    if (lineasPedido.length === 0) {
-      toast({ variant: "destructive", title: "Pedido vacío", description: "Agregue al menos un producto al pedido." });
+    if (lineasPedido.length === 0 || lineasPedido.some(l => !l.cantidad || parseInt(l.cantidad) === 0)) {
+      toast({ variant: "destructive", title: "Pedido inválido", description: "Agregue productos y asegúrese de que las cantidades no sean cero." });
       return;
     }
     if (!asesor) {
@@ -167,7 +171,7 @@ export default function NuevoPedidoPage() {
       }
 
       if (selectedEmpresa) {
-        const newEmpresa = { ...selectedEmpresa, proximoIdPedido: selectedEmpresa.proximoIdPedido + 1 };
+        const newEmpresa = { ...selectedEmpresa, idPedido: selectedEmpresa.idPedido + 1 };
         await updateEmpresa(newEmpresa);
       }
       
@@ -216,7 +220,7 @@ export default function NuevoPedidoPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Seleccionar Cliente</CardTitle>
+          <CardTitle>Cliente</CardTitle>
           <CardDescription>Busque y elija el cliente para este pedido.</CardDescription>
         </CardHeader>
         <CardContent>
@@ -259,7 +263,7 @@ export default function NuevoPedidoPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Agregar Productos</CardTitle>
+          <CardTitle>Productos</CardTitle>
           <CardDescription>Busque y seleccione los productos para agregarlos al pedido.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -334,6 +338,7 @@ export default function NuevoPedidoPage() {
                         onChange={(e) => handleUpdateCantidad(linea.producto.idProducto, e.target.value)}
                         onBlur={(e) => handleCantidadBlur(linea.producto.idProducto, e.target.value)}
                         className="text-center"
+                        min="1"
                       />
                     </TableCell>
                     <TableCell className="text-right font-medium">
