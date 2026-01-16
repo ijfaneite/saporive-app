@@ -44,24 +44,34 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     try {
       const storedToken = localStorage.getItem('auth_token');
-      const storedUser = localStorage.getItem('user');
-      const storedAsesor = localStorage.getItem('asesor');
-      const storedAsesores = localStorage.getItem('asesores');
-      const storedClients = localStorage.getItem('clients');
-      const storedProducts = localStorage.getItem('products');
-      const storedEmpresas = localStorage.getItem('empresas');
-      const storedEmpresa = localStorage.getItem('empresa');
-
       if (storedToken) {
         setToken(storedToken);
+        const storedUser = localStorage.getItem('user');
         if (storedUser) setUser(JSON.parse(storedUser));
-        if (storedAsesor) setAsesorState(JSON.parse(storedAsesor));
-        if (storedAsesores) setAsesores(JSON.parse(storedAsesores));
+        
+        const storedAsesores = localStorage.getItem('asesores');
+        if (storedAsesores) {
+            const parsedAsesores = JSON.parse(storedAsesores) as Asesor[];
+            setAsesores(parsedAsesores);
+            const storedAsesor = localStorage.getItem('asesor');
+            if (storedAsesor) {
+                const parsedAsesor = JSON.parse(storedAsesor) as Asesor;
+                const found = parsedAsesores.find(a => a.idAsesor === parsedAsesor.idAsesor);
+                if (found) setAsesorState(found);
+            }
+        }
+        
+        const storedClients = localStorage.getItem('clients');
         if (storedClients) setClients(JSON.parse(storedClients));
+        
+        const storedProducts = localStorage.getItem('products');
         if (storedProducts) setProducts(JSON.parse(storedProducts));
+
+        const storedEmpresas = localStorage.getItem('empresas');
         if (storedEmpresas) {
             const parsedEmpresas = JSON.parse(storedEmpresas) as Empresa[];
             setEmpresas(parsedEmpresas);
+            const storedEmpresa = localStorage.getItem('empresa');
             if (storedEmpresa) {
                 const parsedSelected = JSON.parse(storedEmpresa) as Empresa;
                 const found = parsedEmpresas.find(e => e.idEmpresa === parsedSelected.idEmpresa);
@@ -212,7 +222,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setUser(userData);
     localStorage.setItem('user', JSON.stringify(userData));
 
-    await syncData(access_token);
+    // Fire-and-forget: Start sync but don't wait for it to complete.
+    // This makes the login feel instantaneous.
+    syncData(access_token);
 
     const storedEmpresa = localStorage.getItem('empresa');
     if (storedEmpresa) {
