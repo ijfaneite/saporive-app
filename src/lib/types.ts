@@ -1,5 +1,3 @@
-import { LargeNumberLike } from "crypto";
-
 export interface User {
   id: string;
   username: string;
@@ -28,7 +26,7 @@ export interface Cliente {
 
 export interface Pedido {
   idPedido: string;
-  idEmpresa:number;
+  idEmpresa: number;
   fechaPedido: string; // ISO date string
   totalPedido: number;
   idAsesor: string;
