@@ -240,10 +240,7 @@ export default function NuevoPedidoPage() {
       </div>
 
       <Card>
-          <CardHeader>
-              <CardTitle>Información del Pedido</CardTitle>
-          </CardHeader>
-          <CardContent className='space-y-2 text-sm'>
+          <CardContent className='pt-6 space-y-2 text-sm'>
               <p><span className='font-semibold'>Nro. Pedido:</span> {idPedidoGenerado}</p>
               <p><span className='font-semibold'>Asesor:</span> {asesor?.Asesor || 'No seleccionado'}</p>
           </CardContent>
@@ -251,7 +248,7 @@ export default function NuevoPedidoPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Cliente</CardTitle>
+          <CardTitle className="text-xl">Cliente</CardTitle>
           <CardDescription>Busque y elija el cliente para este pedido.</CardDescription>
         </CardHeader>
         <CardContent>
@@ -294,7 +291,7 @@ export default function NuevoPedidoPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Productos</CardTitle>
+          <CardTitle className="text-xl">Productos</CardTitle>
           <CardDescription>Busque y seleccione los productos para agregarlos al pedido.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -342,7 +339,7 @@ export default function NuevoPedidoPage() {
       {lineasPedido.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle>Revisar Pedido</CardTitle>
+            <CardTitle className="text-xl">Revisar Pedido</CardTitle>
             <CardDescription>Ajuste las cantidades y revise el pedido antes de guardarlo.</CardDescription>
           </CardHeader>
           <CardContent>
