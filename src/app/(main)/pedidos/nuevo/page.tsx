@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
 import { Producto } from '@/lib/types';
@@ -18,17 +18,31 @@ import { cn } from '@/lib/utils';
 
 type LineaPedido = {
   producto: Producto;
-  cantidad: number;
+  cantidad: string;
 };
 
 export default function NuevoPedidoPage() {
-  const { token, asesor, clients, products } = useAuth();
+  const { token, asesor, clients, products, selectedEmpresa, updateEmpresa } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
 
   const [lineasPedido, setLineasPedido] = useState<LineaPedido[]>([]);
   const [selectedClientId, setSelectedClientId] = useState<string>('');
   const [isSaving, setIsSaving] = useState(false);
+  const [idPedidoGenerado, setIdPedidoGenerado] = useState<string>('');
+
+  useEffect(() => {
+    if (selectedEmpresa) {
+        const date = new Date();
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        const nextId = String(selectedEmpresa.proximoIdPedido).padStart(3, '0');
+        setIdPedidoGenerado(`${year}${month}${day}-${nextId}`);
+    } else {
+        setIdPedidoGenerado('Seleccione una empresa');
+    }
+  }, [selectedEmpresa]);
 
   // Client Combobox states
   const [clientPopoverOpen, setClientPopoverOpen] = useState(false);
@@ -64,19 +78,27 @@ export default function NuevoPedidoPage() {
         });
         return currentLineas;
       }
-      return [...currentLineas, { producto, cantidad: 1 }];
+      return [...currentLineas, { producto, cantidad: "1" }];
     });
   };
 
-  const handleUpdateCantidad = (idProducto: string, cantidad: number) => {
-    const newCantidad = !isNaN(cantidad) && cantidad > 0 ? cantidad : 1;
+  const handleUpdateCantidad = (idProducto: string, cantidad: string) => {
     setLineasPedido(currentLineas =>
       currentLineas.map(linea =>
-        linea.producto.idProducto === idProducto ? { ...linea, cantidad: newCantidad } : linea
+        linea.producto.idProducto === idProducto ? { ...linea, cantidad: cantidad } : linea
       )
     );
   };
   
+  const handleCantidadBlur = (idProducto: string, value: string) => {
+    const num = parseInt(value, 10);
+    if (isNaN(num) || num < 1) {
+        handleUpdateCantidad(idProducto, "1");
+    } else {
+        handleUpdateCantidad(idProducto, String(num));
+    }
+  }
+
   const handleRemoveProducto = (idProducto: string) => {
     setLineasPedido(currentLineas =>
       currentLineas.filter(linea => linea.producto.idProducto !== idProducto)
@@ -85,7 +107,8 @@ export default function NuevoPedidoPage() {
 
   const totalPedido = useMemo(() => {
     return lineasPedido.reduce((total, linea) => {
-      return total + (linea.producto.Precio * linea.cantidad);
+        const cantidad = parseInt(linea.cantidad, 10) || 0;
+        return total + (linea.producto.Precio * cantidad);
     }, 0);
   }, [lineasPedido]);
 
@@ -106,10 +129,15 @@ export default function NuevoPedidoPage() {
         toast({ variant: "destructive", title: "Error", description: "No se ha seleccionado un asesor." });
         return;
     }
+    if (!selectedEmpresa) {
+        toast({ variant: "destructive", title: "Error", description: "No se ha seleccionado una empresa." });
+        return;
+    }
 
     setIsSaving(true);
     
     const pedidoPayload = {
+      idPedido: idPedidoGenerado,
       fechaPedido: new Date().toISOString(),
       totalPedido: totalPedido,
       idAsesor: asesor.idAsesor,
@@ -118,8 +146,8 @@ export default function NuevoPedidoPage() {
       detalles: lineasPedido.map(linea => ({
         idProducto: linea.producto.idProducto,
         Precio: linea.producto.Precio,
-        Cantidad: linea.cantidad,
-        Total: linea.producto.Precio * linea.cantidad,
+        Cantidad: parseInt(linea.cantidad, 10) || 1,
+        Total: linea.producto.Precio * (parseInt(linea.cantidad, 10) || 1),
       })),
     };
 
@@ -136,6 +164,11 @@ export default function NuevoPedidoPage() {
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.detail || 'No se pudo guardar el pedido.');
+      }
+
+      if (selectedEmpresa) {
+        const newEmpresa = { ...selectedEmpresa, proximoIdPedido: selectedEmpresa.proximoIdPedido + 1 };
+        await updateEmpresa(newEmpresa);
       }
       
       toast({
@@ -172,8 +205,18 @@ export default function NuevoPedidoPage() {
       </div>
 
       <Card>
+          <CardHeader>
+              <CardTitle>Información del Pedido</CardTitle>
+          </CardHeader>
+          <CardContent className='space-y-2 text-sm'>
+              <p><span className='font-semibold'>Nro. Pedido:</span> {idPedidoGenerado}</p>
+              <p><span className='font-semibold'>Asesor:</span> {asesor?.Asesor || 'No seleccionado'}</p>
+          </CardContent>
+      </Card>
+
+      <Card>
         <CardHeader>
-          <CardTitle>Paso 1: Seleccionar Cliente</CardTitle>
+          <CardTitle>Seleccionar Cliente</CardTitle>
           <CardDescription>Busque y elija el cliente para este pedido.</CardDescription>
         </CardHeader>
         <CardContent>
@@ -216,7 +259,7 @@ export default function NuevoPedidoPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Paso 2: Agregar Productos</CardTitle>
+          <CardTitle>Agregar Productos</CardTitle>
           <CardDescription>Busque y seleccione los productos para agregarlos al pedido.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -264,7 +307,7 @@ export default function NuevoPedidoPage() {
       {lineasPedido.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle>Paso 3: Revisar Pedido</CardTitle>
+            <CardTitle>Revisar Pedido</CardTitle>
             <CardDescription>Ajuste las cantidades y revise el pedido antes de guardarlo.</CardDescription>
           </CardHeader>
           <CardContent>
@@ -287,14 +330,14 @@ export default function NuevoPedidoPage() {
                     <TableCell>
                       <Input
                         type="number"
-                        min="1"
                         value={linea.cantidad}
-                        onChange={(e) => handleUpdateCantidad(linea.producto.idProducto, parseInt(e.target.value, 10))}
+                        onChange={(e) => handleUpdateCantidad(linea.producto.idProducto, e.target.value)}
+                        onBlur={(e) => handleCantidadBlur(linea.producto.idProducto, e.target.value)}
                         className="text-center"
                       />
                     </TableCell>
                     <TableCell className="text-right font-medium">
-                      {formatCurrency(linea.producto.Precio * linea.cantidad)}
+                      {formatCurrency(linea.producto.Precio * (parseInt(linea.cantidad, 10) || 0))}
                     </TableCell>
                     <TableCell>
                       <Button variant="ghost" size="icon" onClick={() => handleRemoveProducto(linea.producto.idProducto)}>

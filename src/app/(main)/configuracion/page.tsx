@@ -2,6 +2,7 @@
 
 import { useAuth } from "@/lib/auth";
 import { AsesorSelector } from "@/components/AsesorSelector";
+import { EmpresaSelector } from "@/components/EmpresaSelector";
 import { Button } from "@/components/ui/button";
 import { LogOut, RefreshCw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -44,6 +45,16 @@ export default function ConfiguracionPage() {
   return (
     <div className="p-4 space-y-6">
       <h1 className="text-3xl font-bold font-headline text-primary">Configuración</h1>
+      
+      <Card>
+        <CardHeader>
+            <CardTitle>Empresa</CardTitle>
+            <CardDescription>Seleccione la empresa con la que está trabajando.</CardDescription>
+        </CardHeader>
+        <CardContent>
+            <EmpresaSelector />
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>

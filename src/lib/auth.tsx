@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { User, Asesor, Token, Cliente, Producto } from '@/lib/types';
+import { User, Asesor, Token, Cliente, Producto, Empresa } from '@/lib/types';
 import { API_BASE_URL, API_ROUTES } from '@/lib/config';
 import { useToast } from '@/hooks/use-toast';
 
@@ -12,9 +12,13 @@ interface AuthContextType {
   asesor: Asesor | null;
   clients: Cliente[];
   products: Producto[];
+  empresas: Empresa[];
+  selectedEmpresa: Empresa | null;
   login: (username: string, password: string) => Promise<void>;
   logout: () => void;
   setAsesor: (asesor: Asesor) => void;
+  setEmpresa: (empresa: Empresa) => void;
+  updateEmpresa: (empresa: Empresa) => Promise<void>;
   syncData: () => Promise<void>;
   isLoading: boolean;
   isSyncing: boolean;
@@ -42,6 +46,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [asesor, setAsesorState] = useState<Asesor | null>(null);
   const [clients, setClients] = useState<Cliente[]>([]);
   const [products, setProducts] = useState<Producto[]>([]);
+  const [empresas, setEmpresas] = useState<Empresa[]>([]);
+  const [selectedEmpresa, setSelectedEmpresaState] = useState<Empresa | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
   const router = useRouter();
@@ -54,6 +60,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const storedAsesor = localStorage.getItem('asesor');
       const storedClients = localStorage.getItem('clients');
       const storedProducts = localStorage.getItem('products');
+      const storedEmpresa = localStorage.getItem('empresa');
+      
+      const mockEmpresas: Empresa[] = [
+        { idEmpresa: '1', nombre: 'Sapori D Italia, C.A.', proximoIdPedido: 453 },
+        { idEmpresa: '2', nombre: 'Inversiones Gaea, C.A.', proximoIdPedido: 101 },
+      ];
+      setEmpresas(mockEmpresas);
 
       if (storedToken) {
         setToken(storedToken);
@@ -61,6 +74,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         if (storedAsesor) setAsesorState(JSON.parse(storedAsesor));
         if (storedClients) setClients(JSON.parse(storedClients));
         if (storedProducts) setProducts(JSON.parse(storedProducts));
+        if (storedEmpresa) {
+            const parsed = JSON.parse(storedEmpresa);
+            const found = mockEmpresas.find(e => e.idEmpresa === parsed.idEmpresa);
+            if (found) {
+                 setSelectedEmpresaState(found);
+            }
+        }
       }
     } catch (error) {
       console.error("Failed to load auth state from storage", error);
@@ -134,7 +154,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setToken(access_token);
     setCookie('auth_token', access_token, 7);
     
-    // Give the server a moment to process the token
     await new Promise(resolve => setTimeout(resolve, 500));
 
     let userResponse;
@@ -170,11 +189,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setAsesorState(null);
     setClients([]);
     setProducts([]);
+    setSelectedEmpresaState(null);
     eraseCookie('auth_token');
     localStorage.removeItem('user');
     localStorage.removeItem('asesor');
     localStorage.removeItem('clients');
     localStorage.removeItem('products');
+    localStorage.removeItem('empresa');
     router.push('/login');
   };
 
@@ -182,9 +203,23 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setAsesorState(asesor);
     localStorage.setItem('asesor', JSON.stringify(asesor));
   };
+  
+  const setEmpresa = (empresa: Empresa) => {
+    setSelectedEmpresaState(empresa);
+    localStorage.setItem('empresa', JSON.stringify(empresa));
+  };
+
+  const updateEmpresa = async (empresa: Empresa) => {
+    console.log(`Simulating PATCH to update proximoIdPedido for ${empresa.nombre} to ${empresa.proximoIdPedido}`);
+    const updatedEmpresas = empresas.map(e => e.idEmpresa === empresa.idEmpresa ? empresa : e);
+    setEmpresas(updatedEmpresas);
+    if (selectedEmpresa?.idEmpresa === empresa.idEmpresa) {
+        setEmpresa(empresa);
+    }
+  };
 
   return (
-    <AuthContext.Provider value={{ user, token, asesor, clients, products, login, logout, setAsesor, syncData, isLoading, isSyncing }}>
+    <AuthContext.Provider value={{ user, token, asesor, clients, products, empresas, selectedEmpresa, login, logout, setAsesor, setEmpresa, updateEmpresa, syncData, isLoading, isSyncing }}>
       {children}
     </AuthContext.Provider>
   );
