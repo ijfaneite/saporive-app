@@ -122,21 +122,28 @@ export default function ImprimirPedidoPage() {
                 </tr>
             </thead>
             <tbody>
-            {pedido.detalles.map((detalle) => (
-                <React.Fragment key={detalle.id}>
+              {pedido.detalles.map((detalle) => {
+                return (
+                  <React.Fragment key={detalle.id}>
                     <tr>
-                        <td colSpan={4} className="text-left pt-1 uppercase">
-                            {getProducto(detalle.idProducto)?.Producto || `ID: ${detalle.idProducto}`}
-                        </td>
+                      <td colSpan={4} className="text-left pt-1 uppercase">
+                        {getProducto(detalle.idProducto)?.Producto ||
+                          `ID: ${detalle.idProducto}`}
+                      </td>
                     </tr>
                     <tr>
-                        <td colSpan={1}></td>
-                        <td className="text-right px-1">{detalle.Cantidad}</td>
-                        <td className="text-right">{formatCurrency(detalle.Precio)}</td>
-                        <td className="text-right">{formatCurrency(detalle.Total)}</td>
+                      <td colSpan={1}></td>
+                      <td className="text-right px-1">{detalle.Cantidad}</td>
+                      <td className="text-right">
+                        {formatCurrency(detalle.Precio)}
+                      </td>
+                      <td className="text-right">
+                        {formatCurrency(detalle.Total)}
+                      </td>
                     </tr>
-                </React.Fragment>
-            ))}
+                  </React.Fragment>
+                );
+              })}
             </tbody>
         </table>
         
