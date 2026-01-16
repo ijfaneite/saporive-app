@@ -236,14 +236,13 @@ export default function NuevoPedidoPage() {
             <ArrowLeft />
           </Button>
         </Link>
-        <h1 className="text-xl font-bold font-headline text-primary">Nuevo Pedido</h1>
       </div>
 
       <Card>
           <CardContent className='p-2 space-y-2 text-sm'>
               <div className="flex items-center gap-2">
                 <Package className="h-5 w-5 text-muted-foreground" />
-                <span className="font-bold text-primary">{idPedidoGenerado}</span>
+                <span className="font-bold text-lg text-primary">{idPedidoGenerado}</span>
               </div>
               <div className="flex items-center gap-2">
                 <User className="h-5 w-5 text-muted-foreground" />
@@ -255,7 +254,6 @@ export default function NuevoPedidoPage() {
       <Card>
         <CardHeader className="p-2">
           <CardTitle className="text-lg">Cliente</CardTitle>
-          <CardDescription>Busque y elija el cliente para este pedido.</CardDescription>
         </CardHeader>
         <CardContent className="p-2 pt-0">
           <Popover open={clientPopoverOpen} onOpenChange={setClientPopoverOpen}>
@@ -298,7 +296,6 @@ export default function NuevoPedidoPage() {
       <Card>
         <CardHeader className="p-2">
           <CardTitle className="text-lg">Productos</CardTitle>
-          <CardDescription>Busque y seleccione los productos para agregarlos al pedido.</CardDescription>
         </CardHeader>
         <CardContent className="p-2 pt-0 space-y-4">
             <Popover open={productPopoverOpen} onOpenChange={setProductPopoverOpen}>
@@ -388,13 +385,16 @@ export default function NuevoPedidoPage() {
               </TableBody>
             </Table>
           </CardContent>
-          <CardFooter className="flex-col items-end gap-2 p-2 pt-2">
-            <div className="text-xl font-bold">
-                Total: <span className="text-primary">{formatCurrency(totalPedido)}</span>
+          <CardFooter className="flex flex-col gap-2 p-2 pt-2">
+            <div className="flex justify-between items-center w-full">
+                <span className="text-muted-foreground font-semibold">Nro. Items: {lineasPedido.length}</span>
+                <div className="text-xl font-bold">
+                    Total: <span className="text-primary">{formatCurrency(totalPedido)}</span>
+                </div>
             </div>
-            <Button onClick={handleSavePedido} disabled={isSaving} className="w-full sm:w-auto">
+            <Button onClick={handleSavePedido} disabled={isSaving} className="w-full">
               {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Guardar Pedido
+              Guardar
             </Button>
           </CardFooter>
         </Card>
