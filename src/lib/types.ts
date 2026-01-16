@@ -8,12 +8,20 @@ export interface User {
 export interface Asesor {
   idAsesor: string;
   Asesor: string;
+  createdAt?: string;
+  updatedAt?: string;
+  createdBy?: string;
+  updatedBy?: string;
 }
 
 export interface Producto {
   idProducto: string;
   Producto: string;
   Precio: number;
+  createdAt?: string;
+  updatedAt?: string;
+  createdBy?: string;
+  updatedBy?: string;
 }
 
 export interface Cliente {
@@ -22,18 +30,29 @@ export interface Cliente {
   Cliente: string;
   Zona: string;
   idAsesor: string;
+  asesor?: Asesor;
+  createdAt?: string;
+  updatedAt?: string;
+  createdBy?: string;
+  updatedBy?: string;
 }
 
 export interface Pedido {
   idPedido: string;
   idEmpresa: number;
-  fechaPedido: string; // ISO date string
+  fechaPedido: string;
   totalPedido: number;
   idAsesor: string;
   Status: string;
   idCliente: string;
   Rif?: string;
   detalles: DetallePedido[];
+  asesor?: Asesor;
+  cliente?: Cliente;
+  createdAt: string;
+  updatedAt: string;
+  createdBy: string;
+  updatedBy: string;
 }
 
 export interface DetallePedido {
@@ -43,6 +62,11 @@ export interface DetallePedido {
   Precio: number;
   Cantidad: number;
   Total: number;
+  producto?: Producto;
+  createdAt: string;
+  updatedAt: string;
+  createdBy: string;
+  updatedBy: string;
 }
 
 export interface Token {
