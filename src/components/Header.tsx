@@ -3,15 +3,15 @@
 import Image from 'next/image';
 import { useAuth } from '@/lib/auth';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
-import { ApiStatus } from './ApiStatus';
+import { User, Building2 } from 'lucide-react';
 
 export function Header() {
-  const { selectedEmpresa } = useAuth();
+  const { selectedEmpresa, user } = useAuth();
   const logo = PlaceHolderImages.find(img => img.id === 'logo');
 
   return (
     <header className="flex items-center justify-between p-3 bg-primary text-primary-foreground shadow-md font-headline">
-      <div className="flex items-center gap-2 w-1/4">
+      <div className="flex items-center gap-2">
         {logo && (
           <Image
             src={logo.imageUrl}
@@ -23,11 +23,16 @@ export function Header() {
           />
         )}
       </div>
-      <div className="font-semibold text-center truncate flex-grow text-lg">
-        {selectedEmpresa?.RazonSocial || 'Seleccione Empresa'}
-      </div>
-      <div className="flex items-center justify-end gap-3 text-xs w-1/4">
-        <ApiStatus />
+      
+      <div className="flex flex-col items-end">
+        <div className="flex items-center gap-1.5 text-sm font-medium">
+          <User className="w-4 h-4" />
+          <span>{user?.username || 'Usuario'}</span>
+        </div>
+        <div className="flex items-center gap-1.5 text-xs mt-1">
+            <Building2 className="w-4 h-4" />
+            <span className="truncate">{selectedEmpresa?.RazonSocial || 'Seleccione Empresa'}</span>
+        </div>
       </div>
     </header>
   );
