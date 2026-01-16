@@ -5,9 +5,19 @@ import { Header } from '@/components/Header';
 import { BottomNav } from '@/components/BottomNav';
 import { AsesorSelectionModal } from '@/components/AsesorSelectionModal';
 import { Loader2 } from 'lucide-react';
+import { useRouter, usePathname } from 'next/navigation';
+import { useEffect } from 'react';
 
 export default function MainLayout({ children }: { children: React.ReactNode }) {
-  const { asesor, isLoading, user } = useAuth();
+  const { asesor, isLoading, user, selectedEmpresa } = useAuth();
+  const router = useRouter();
+  const pathname = usePathname();
+
+  useEffect(() => {
+    if (!isLoading && user && !selectedEmpresa && pathname !== '/configuracion') {
+      router.replace('/configuracion');
+    }
+  }, [isLoading, user, selectedEmpresa, pathname, router]);
 
   if (isLoading) {
     return (
@@ -16,6 +26,18 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
       </div>
     );
   }
+
+  // Si no hay empresa seleccionada, mostramos un mensaje hasta que se redirija
+  if (user && !selectedEmpresa && pathname !== '/configuracion') {
+    return (
+       <div className="flex items-center justify-center min-h-screen bg-background">
+         <div className='text-center'>
+           <Loader2 className="w-12 h-12 animate-spin text-primary mx-auto" />
+           <p className="mt-4 text-muted-foreground">Seleccione una empresa para continuar...</p>
+         </div>
+       </div>
+     );
+   }
 
   const showAsesorModal = user && !asesor;
 

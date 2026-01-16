@@ -165,8 +165,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setToken(access_token);
     setCookie('auth_token', access_token, 7);
     
-    await new Promise(resolve => setTimeout(resolve, 500));
-
     let userResponse;
     try {
         userResponse = await fetch(`${API_BASE_URL}${API_ROUTES.me}`, {
@@ -179,9 +177,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
 
     if (!userResponse.ok) {
-        const errorBody = await userResponse.text();
-        console.error("Fetch user failed:", errorBody)
-        throw new Error('No se pudieron obtener los datos del usuario desde el servidor.');
+        let errorMessage = 'No se pudieron obtener los datos del usuario desde el servidor.';
+        try {
+            const errorBody = await userResponse.json();
+            if (errorBody.detail) {
+                errorMessage = errorBody.detail;
+            }
+        } catch (e) {
+            // El cuerpo no era JSON o algo más salió mal.
+        }
+        throw new Error(errorMessage);
     }
 
     const userData: User = await userResponse.json();
