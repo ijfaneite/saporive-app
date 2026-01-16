@@ -138,24 +138,24 @@ export default function PedidosPage() {
                     return (
                         <Card key={pedido.idPedido}>
                             <CardHeader className="flex flex-row items-center justify-between p-2 pb-0">
-                                <CardTitle className="text-lg font-bold" title={pedido.idPedido}>
+                                <CardTitle className="text-lg font-bold text-foreground" title={pedido.idPedido}>
                                     {pedido.idPedido}
                                 </CardTitle>
                                 <Badge variant={getStatusVariant(pedido.Status)} className="whitespace-nowrap text-xs">{pedido.Status}</Badge>
                             </CardHeader>
-                            <CardContent className="p-2 grid gap-1">
-                                <div className="text-sm font-semibold text-foreground truncate" title={cliente?.Cliente}>
-                                    {cliente?.Cliente || `ID: ${pedido.idCliente}`}
+                            <CardContent className="p-2">
+                                <div className="grid gap-0 text-sm text-muted-foreground">
+                                    <p className="truncate" title={cliente?.Cliente}>
+                                        {cliente?.Cliente || `ID: ${pedido.idCliente}`}
+                                    </p>
+                                    <p>{pedido.Rif || cliente?.Rif || 'N/A'}</p>
                                 </div>
-                                <div className="text-sm text-muted-foreground">
-                                    <p>RIF: {pedido.Rif || cliente?.Rif || 'N/A'}</p>
-                                </div>
-                                <div className="flex justify-between items-end mt-2">
+                                <div className="flex justify-between items-end mt-1">
                                     <div>
                                         <p className="text-xs text-muted-foreground">
                                             {format(new Date(pedido.fechaPedido), "dd MMM yyyy", { locale: es })}
                                         </p>
-                                        <p className="text-lg font-bold text-primary">{formatCurrency(pedido.totalPedido)}</p>
+                                        <p className="text-lg font-bold text-destructive">{formatCurrency(pedido.totalPedido)}</p>
                                     </div>
                                     <Link href={`/pedidos/${pedido.idPedido}`} passHref>
                                         <Button variant="outline" size="icon" aria-label="Editar Pedido">
