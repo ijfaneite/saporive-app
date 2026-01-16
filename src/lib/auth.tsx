@@ -6,6 +6,40 @@ import { User, Asesor, Token, Cliente, Producto, Empresa } from '@/lib/types';
 import { API_BASE_URL, API_ROUTES } from '@/lib/config';
 import { useToast } from '@/hooks/use-toast';
 
+// Helper functions to manage cookies
+const setCookie = (name: string, value: string, days: number) => {
+    let expires = "";
+    if (days) {
+        const date = new Date();
+        date.setTime(date.getTime() + (days*24*60*60*1000));
+        expires = "; expires=" + date.toUTCString();
+    }
+    if (typeof document !== 'undefined') {
+        document.cookie = name + "=" + (value || "")  + expires + "; path=/";
+    }
+}
+
+const getCookie = (name: string): string | null => {
+    if (typeof document === 'undefined') {
+        return null;
+    }
+    const nameEQ = name + "=";
+    const ca = document.cookie.split(';');
+    for(let i=0; i < ca.length; i++) {
+        let c = ca[i];
+        while (c.charAt(0)==' ') c = c.substring(1,c.length);
+        if (c.indexOf(nameEQ) == 0) return c.substring(nameEQ.length,c.length);
+    }
+    return null;
+}
+
+const eraseCookie = (name: string) => {   
+    if (typeof document !== 'undefined') {
+        document.cookie = name+'=; Max-Age=-99999999; path=/;';  
+    }
+}
+
+
 interface AuthContextType {
   user: User | null;
   token: string | null;
@@ -43,7 +77,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     try {
-      const storedToken = localStorage.getItem('auth_token');
+      const storedToken = getCookie('auth_token');
       if (storedToken) {
         setToken(storedToken);
         const storedUser = localStorage.getItem('user');
@@ -192,7 +226,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     const { access_token } = await response.json();
     setToken(access_token);
-    localStorage.setItem('auth_token', access_token);
+    setCookie('auth_token', access_token, 7);
     
     let userResponse;
     try {
@@ -243,7 +277,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setProducts([]);
     setEmpresas([]);
     setSelectedEmpresaState(null);
-    localStorage.removeItem('auth_token');
+    eraseCookie('auth_token');
     localStorage.removeItem('user');
     localStorage.removeItem('asesor');
     localStorage.removeItem('asesores');
