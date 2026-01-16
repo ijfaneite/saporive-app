@@ -22,7 +22,7 @@ export interface Empresa {
 export interface Asesor {
   idAsesor: string;
   Asesor: string;
-  createdAt?: string; // Optional because it's None in Base
+  createdAt?: string;
   updatedAt?: string;
   createdBy?: string;
   updatedBy?: string;
@@ -99,7 +99,7 @@ export interface Pedido {
   idAsesor: string;
   idCliente: string;
   Status: string;
-  Rif?: string; // Mantener por compatibilidad si la API lo envía
+  Rif?: string; // Kept for compatibility with existing UI logic
   asesor?: Asesor;
   cliente?: Cliente;
   detalles: DetallePedido[];
@@ -108,7 +108,3 @@ export interface Pedido {
   createdBy: string;
   updatedBy: string;
 }
-
-// Backward compatibility for old code if it exists.
-export type DetallePedidoCreate = DetallePedidoBase;
-export type PedidoCreate = PedidoCreatePayload;
