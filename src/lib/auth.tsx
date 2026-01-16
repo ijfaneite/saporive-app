@@ -155,7 +155,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             method: 'POST',
             headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'Accept': 'application/json' },
             body: new URLSearchParams({
-                grant_type: '',
+                grant_type: 'password',
                 username: username,
                 password: password,
                 scope: '',
