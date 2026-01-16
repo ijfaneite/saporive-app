@@ -147,6 +147,7 @@ export default function NuevoPedidoPage() {
       idAsesor: asesor.idAsesor,
       Status: "Pendiente",
       idCliente: selectedClientId,
+      idEmpresa: parseInt(selectedEmpresa.idEmpresa, 10),
       detalles: lineasPedido.map(linea => ({
         idProducto: linea.producto.idProducto,
         Precio: linea.producto.Precio,
@@ -369,3 +370,5 @@ export default function NuevoPedidoPage() {
     </div>
   );
 }
+
+    
