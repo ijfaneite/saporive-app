@@ -6,7 +6,7 @@ import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { ApiStatus } from './ApiStatus';
 
 export function Header() {
-  const { user, selectedEmpresa } = useAuth();
+  const { selectedEmpresa } = useAuth();
   const logo = PlaceHolderImages.find(img => img.id === 'logo');
 
   return (
@@ -27,7 +27,6 @@ export function Header() {
         {selectedEmpresa?.RazonSocial || 'Seleccione Empresa'}
       </div>
       <div className="flex items-center justify-end gap-3 text-xs w-1/4">
-        <span className='truncate'>{user?.username || 'Usuario'}</span>
         <ApiStatus />
       </div>
     </header>
