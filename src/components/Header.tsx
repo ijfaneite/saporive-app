@@ -7,12 +7,13 @@ import { User, Building2 } from 'lucide-react';
 import { ApiStatus } from './ApiStatus';
 
 export function Header() {
-  const { selectedEmpresa, user } = useAuth();
+  const { selectedEmpresa, user, asesor } = useAuth();
   const logo = PlaceHolderImages.find(img => img.id === 'logo');
 
   return (
-    <header className="flex items-center justify-between p-3 bg-primary text-primary-foreground shadow-md font-headline">
-      <div className="flex items-center gap-2 shrink-0">
+    <header className="grid grid-cols-3 items-center p-3 bg-primary text-primary-foreground shadow-md font-headline">
+      {/* Left side */}
+      <div className="flex items-center gap-2">
         {logo && (
           <Image
             src={logo.imageUrl}
@@ -25,14 +26,22 @@ export function Header() {
         )}
       </div>
       
-      <div className="flex flex-col items-end gap-1">
-        <div className="flex items-center gap-1.5 text-sm font-medium">
-          <User className="w-4 h-4" />
-          <span>{user?.username || 'Usuario'}</span>
-        </div>
-        <div className="flex items-center gap-1.5 text-xs">
-            <Building2 className="w-4 h-4" />
-            <span className="truncate">{selectedEmpresa?.RazonSocial || 'Seleccione Empresa'}</span>
+      {/* Center */}
+      <div className="text-center font-semibold text-base truncate">
+        <span>{asesor?.Asesor || ''}</span>
+      </div>
+
+      {/* Right side */}
+      <div className="flex justify-end items-center gap-3">
+        <div className="flex flex-col items-end gap-1">
+            <div className="flex items-center gap-1.5 text-sm font-medium">
+              <User className="w-4 h-4" />
+              <span className="truncate">{user?.username || 'Usuario'}</span>
+            </div>
+            <div className="flex items-center gap-1.5 text-xs">
+                <Building2 className="w-4 h-4" />
+                <span className="truncate">{selectedEmpresa?.RazonSocial || 'Seleccione Empresa'}</span>
+            </div>
         </div>
         <ApiStatus />
       </div>
