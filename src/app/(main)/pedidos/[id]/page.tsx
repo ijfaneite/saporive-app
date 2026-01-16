@@ -251,7 +251,7 @@ export default function EditarPedidoPage() {
               <CardTitle>Información del Pedido</CardTitle>
           </CardHeader>
           <CardContent className='space-y-2 text-sm'>
-              <p><span className='font-semibold'>Nro. Pedido:</span> {pedido?.idPedido}</p>
+              <p><span className='font-semibold'>Nro. Pedido:</span> <span className="font-bold text-primary">{pedido?.idPedido}</span></p>
               <p><span className='font-semibold'>Asesor:</span> {asesor?.Asesor || 'No seleccionado'}</p>
           </CardContent>
       </Card>
@@ -408,3 +408,5 @@ export default function EditarPedidoPage() {
     </div>
   );
 }
+
+    
