@@ -387,7 +387,9 @@ export default function NuevoPedidoPage() {
           </CardContent>
           <CardFooter className="flex flex-col gap-2 p-2 pt-2">
             <div className="flex justify-between items-center w-full">
-                <span className="text-muted-foreground font-semibold">Nro. Items: {lineasPedido.length}</span>
+                <div className="text-xl font-bold">
+                    Nro. Items: <span className="text-primary">{lineasPedido.length}</span>
+                </div>
                 <div className="text-xl font-bold">
                     Total: <span className="text-primary">{formatCurrency(totalPedido)}</span>
                 </div>

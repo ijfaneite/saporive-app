@@ -6,12 +6,11 @@ import { Pedido } from '@/lib/types';
 import { API_BASE_URL, API_ROUTES } from '@/lib/config';
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { PlusCircle, Loader2, RefreshCw, Pencil } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+import { PlusCircle, Loader2, RefreshCw, Pencil, Printer } from "lucide-react";
 import Link from 'next/link';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
@@ -85,14 +84,6 @@ export default function PedidosPage() {
     return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value);
   }
 
-  const getStatusVariant = (status: string): "secondary" | "default" | "destructive" | "outline" | null | undefined => {
-    const lowerCaseStatus = status.toLowerCase();
-    if (lowerCaseStatus.includes('pendiente')) return 'secondary';
-    if (lowerCaseStatus.includes('completado') || lowerCaseStatus.includes('entregado')) return 'default';
-    if (lowerCaseStatus.includes('cancelado')) return 'destructive';
-    return 'outline';
-  }
-
   return (
     <div className="p-4 space-y-6 flex flex-col h-full">
       <div className="flex justify-between items-center flex-shrink-0">
@@ -137,31 +128,35 @@ export default function PedidosPage() {
                     const cliente = getCliente(pedido.idCliente);
                     return (
                         <Card key={pedido.idPedido}>
-                            <CardHeader className="flex flex-row items-center justify-between p-2 pb-0">
-                                <CardTitle className="text-lg font-bold text-foreground" title={pedido.idPedido}>
-                                    {pedido.idPedido}
-                                </CardTitle>
-                                <Badge variant={getStatusVariant(pedido.Status)} className="whitespace-nowrap text-xs">{pedido.Status}</Badge>
-                            </CardHeader>
-                            <CardContent className="p-2">
-                                <div className="grid gap-0 text-muted-foreground">
-                                    <p className="truncate text-xs font-bold" title={cliente?.Cliente}>
+                            <CardContent className="p-2 pt-0">
+                                <div className="grid gap-0">
+                                    <p className="font-bold text-foreground" title={pedido.idPedido}>
+                                        {pedido.idPedido}
+                                    </p>
+                                    <p className="truncate text-xs text-muted-foreground" title={cliente?.Cliente}>
                                         {cliente?.Cliente || `ID: ${pedido.idCliente}`}
                                     </p>
-                                    <p className="truncate text-xs">{pedido.Rif || cliente?.Rif || 'N/A'}</p>
+                                    <p className="truncate text-xs text-muted-foreground">{pedido.Rif || cliente?.Rif || 'N/A'}</p>
+                                    <p className="text-xs text-muted-foreground">
+                                        {format(new Date(pedido.fechaPedido), "dd/MMM/yyyy", { locale: es })}
+                                    </p>
                                 </div>
                                 <div className="flex justify-between items-end mt-1">
-                                    <div>
-                                        <p className="text-xs text-muted-foreground">
-                                            {format(new Date(pedido.fechaPedido), "dd/MMM/yyyy", { locale: es })}
-                                        </p>
-                                        <p className="text-lg font-bold text-destructive">{formatCurrency(pedido.totalPedido)}</p>
+                                    <p className="text-lg font-bold text-destructive">{formatCurrency(pedido.totalPedido)}</p>
+                                    <div className="flex items-center gap-2">
+                                        <Link href={`/pedidos/${pedido.idPedido}/imprimir`} passHref legacyBehavior>
+                                            <a target="_blank" rel="noopener noreferrer">
+                                                <Button variant="outline" size="icon" aria-label="Imprimir Pedido">
+                                                    <Printer className="h-4 w-4" />
+                                                </Button>
+                                            </a>
+                                        </Link>
+                                        <Link href={`/pedidos/${pedido.idPedido}`} passHref>
+                                            <Button variant="outline" size="icon" aria-label="Editar Pedido">
+                                                <Pencil className="h-4 w-4" />
+                                            </Button>
+                                        </Link>
                                     </div>
-                                    <Link href={`/pedidos/${pedido.idPedido}`} passHref>
-                                        <Button variant="outline" size="icon" aria-label="Editar Pedido">
-                                            <Pencil className="h-4 w-4" />
-                                        </Button>
-                                    </Link>
                                 </div>
                             </CardContent>
                         </Card>
