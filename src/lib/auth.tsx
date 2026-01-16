@@ -19,7 +19,7 @@ interface AuthContextType {
   logout: () => void;
   setAsesor: (asesor: Asesor) => void;
   setEmpresa: (empresa: Empresa) => void;
-  updateEmpresa: (empresa: Empresa) => Promise<void>;
+  updateEmpresaInState: (empresa: Empresa) => void;
   syncData: (tokenOverride?: string) => Promise<void>;
   isLoading: boolean;
   isSyncing: boolean;
@@ -252,56 +252,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     localStorage.setItem('empresa', JSON.stringify(empresa));
   };
 
-  const updateEmpresa = async (empresa: Empresa) => {
-    if (!token) {
-        toast({
-            variant: "destructive",
-            title: "Error de autenticación",
-            description: "No se puede actualizar la empresa sin un token válido.",
-        });
-        return;
-    }
-    try {
-        const response = await fetch(`${API_BASE_URL}${API_ROUTES.updateEmpresaPedido}${empresa.idEmpresa}`, {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json',
-                Authorization: `Bearer ${token}`,
-            },
-            body: JSON.stringify(empresa),
-        });
-
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.detail || 'No se pudo actualizar el contador de pedidos.');
-        }
-
-        const updatedEmpresaData: Empresa = await response.json();
-        
-        const formattedUpdatedEmpresa = {
-            ...updatedEmpresaData,
-            idEmpresa: String(updatedEmpresaData.idEmpresa),
-        };
-
-        const updatedEmpresas = empresas.map(e => e.idEmpresa === formattedUpdatedEmpresa.idEmpresa ? formattedUpdatedEmpresa : e);
-        setEmpresas(updatedEmpresas);
-        localStorage.setItem('empresas', JSON.stringify(updatedEmpresas));
-        
-        if (selectedEmpresa?.idEmpresa === formattedUpdatedEmpresa.idEmpresa) {
-            setEmpresa(formattedUpdatedEmpresa);
-        }
-
-    } catch (error) {
-        toast({
-            variant: "destructive",
-            title: "Error al actualizar empresa",
-            description: error instanceof Error ? error.message : "Ocurrió un error inesperado.",
-        });
+  const updateEmpresaInState = (updatedEmpresa: Empresa) => {
+    const updatedEmpresas = empresas.map(e => e.idEmpresa === updatedEmpresa.idEmpresa ? updatedEmpresa : e);
+    setEmpresas(updatedEmpresas);
+    localStorage.setItem('empresas', JSON.stringify(updatedEmpresas));
+    
+    if (selectedEmpresa?.idEmpresa === updatedEmpresa.idEmpresa) {
+        setEmpresa(updatedEmpresa);
     }
   };
 
   return (
-    <AuthContext.Provider value={{ user, token, asesor, asesores, clients, products, empresas, selectedEmpresa, login, logout, setAsesor, setEmpresa, updateEmpresa, syncData, isLoading, isSyncing }}>
+    <AuthContext.Provider value={{ user, token, asesor, asesores, clients, products, empresas, selectedEmpresa, login, logout, setAsesor, setEmpresa, updateEmpresaInState, syncData, isLoading, isSyncing }}>
       {children}
     </AuthContext.Provider>
   );

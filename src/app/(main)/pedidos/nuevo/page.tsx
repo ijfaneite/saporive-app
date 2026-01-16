@@ -3,7 +3,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
-import { Producto } from '@/lib/types';
+import { Producto, Empresa } from '@/lib/types';
 import { API_BASE_URL, API_ROUTES } from '@/lib/config';
 import { useToast } from "@/hooks/use-toast";
 import { Button } from '@/components/ui/button';
@@ -22,7 +22,7 @@ type LineaPedido = {
 };
 
 export default function NuevoPedidoPage() {
-  const { token, asesor, clients, products, selectedEmpresa, updateEmpresa } from useAuth();
+  const { token, asesor, clients, products, selectedEmpresa, updateEmpresaInState } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
 
@@ -170,9 +170,40 @@ export default function NuevoPedidoPage() {
         const errorData = await response.json();
         throw new Error(errorData.detail || 'No se pudo guardar el pedido.');
       }
-
+      
+      // Increment counter on success
       if (selectedEmpresa) {
-        await updateEmpresa(selectedEmpresa);
+        try {
+            const incrementResponse = await fetch(`${API_BASE_URL}${API_ROUTES.updateEmpresaPedido}${selectedEmpresa.idEmpresa}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${token}`,
+                },
+                body: JSON.stringify(selectedEmpresa),
+            });
+
+            if (incrementResponse.ok) {
+                const updatedEmpresaData: Empresa = await incrementResponse.json();
+                const formattedUpdatedEmpresa = {
+                    ...updatedEmpresaData,
+                    idEmpresa: String(updatedEmpresaData.idEmpresa),
+                };
+                updateEmpresaInState(formattedUpdatedEmpresa);
+            } else {
+                toast({
+                    variant: "destructive",
+                    title: "Advertencia de Sincronización",
+                    description: "El pedido se guardó, pero el contador de pedidos no pudo actualizarse. Por favor, sincronice manualmente.",
+                });
+            }
+        } catch (e) {
+             toast({
+                variant: "destructive",
+                title: "Error de Sincronización",
+                description: "El pedido se guardó, pero hubo un error al actualizar el contador.",
+            });
+        }
       }
       
       toast({
