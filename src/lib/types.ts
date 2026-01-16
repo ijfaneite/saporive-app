@@ -1,8 +1,19 @@
 export interface User {
-  id: string;
   username: string;
-  email: string;
-  disabled: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Token {
+  access_token: string;
+  token_type: string;
+}
+
+export interface Empresa {
+  idEmpresa: string;
+  RazonSocial: string;
+  idPedido: number;
+  idRecibo: number;
 }
 
 export interface Asesor {
@@ -26,8 +37,8 @@ export interface Producto {
 
 export interface Cliente {
   idCliente: string;
-  Rif: string;
   Cliente: string;
+  Rif: string;
   Zona: string;
   idAsesor: string;
   asesor?: Asesor;
@@ -51,31 +62,32 @@ export interface DetallePedido {
   updatedBy: string;
 }
 
+// Para la creación, la API espera un formato más simple para los detalles
+export interface DetallePedidoCreate {
+    idProducto: string;
+    Precio: number;
+    Cantidad: number;
+}
+
 export interface Pedido {
   idPedido: string;
   idEmpresa: number;
   fechaPedido: string;
   totalPedido: number;
   idAsesor: string;
-  Status: string;
   idCliente: string;
-  detalles: DetallePedido[];
+  Status: string;
+  Rif?: string; // Mantener por compatibilidad si la API lo envía
   asesor?: Asesor;
   cliente?: Cliente;
+  detalles: DetallePedido[];
   createdAt: string;
   updatedAt: string;
   createdBy: string;
   updatedBy: string;
 }
 
-export interface Token {
-  access_token: string;
-  token_type: string;
-}
-
-export interface Empresa {
-  idEmpresa: string;
-  RazonSocial: string;
-  idPedido: number;
-  idRecibo: number;
+// Para la creación, la API espera que los detalles sean del tipo DetallePedidoCreate
+export interface PedidoCreate extends Omit<Pedido, 'detalles' | 'createdAt' | 'updatedAt' | 'createdBy' | 'updatedBy' | 'asesor' | 'cliente'> {
+    detalles: DetallePedidoCreate[];
 }

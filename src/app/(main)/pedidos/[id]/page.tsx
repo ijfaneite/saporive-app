@@ -3,7 +3,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
-import { Producto, Pedido, DetallePedido } from '@/lib/types';
+import { Producto, Pedido, DetallePedidoCreate } from '@/lib/types';
 import { API_BASE_URL, API_ROUTES } from '@/lib/config';
 import { useToast } from "@/hooks/use-toast";
 import { Button } from '@/components/ui/button';
@@ -17,7 +17,8 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { cn } from '@/lib/utils';
 
 type LineaPedido = {
-  id: string;
+  // id único para el manejo del estado en el frontend
+  id: string; 
   producto: Producto;
   cantidad: string;
 };
@@ -56,7 +57,7 @@ export default function EditarPedidoPage() {
         const lineas = data.detalles.map(detalle => {
             const producto = products.find(p => p.idProducto === detalle.idProducto);
             return {
-              id: detalle.id,
+              id: detalle.id, // Usar el ID del detalle de la BD
               producto: producto || { 
                   idProducto: detalle.idProducto, 
                   Producto: `(No disponible) ID: ${detalle.idProducto}`, 
@@ -117,6 +118,7 @@ export default function EditarPedidoPage() {
         });
         return currentLineas;
       }
+      // Asignar un ID temporal para nuevos productos
       return [...currentLineas, { id: `new-${Date.now()}`, producto, cantidad: "1" }];
     });
   };
@@ -175,27 +177,22 @@ export default function EditarPedidoPage() {
 
     setIsSaving(true);
     
+    // El backend ahora espera una lista simple de detalles
+    const detallesParaEnviar: DetallePedidoCreate[] = lineasPedido.map(linea => ({
+        idProducto: linea.producto.idProducto,
+        Precio: linea.producto.Precio,
+        Cantidad: parseInt(linea.cantidad, 10) || 1,
+    }));
+
     const pedidoPayload = {
       idPedido: pedido.idPedido,
-      fechaPedido: pedido.fechaPedido,
+      fechaPedido: new Date().toISOString(), // Usar fecha actual para la actualización
       totalPedido: totalPedido,
       idAsesor: asesor.idAsesor,
       Status: pedido.Status,
       idCliente: selectedClientId,
       idEmpresa: parseInt(selectedEmpresa.idEmpresa, 10),
-      detalles: lineasPedido.map(linea => {
-        const detallePayload: Partial<DetallePedido> = {
-            idPedido: pedido.idPedido,
-            idProducto: linea.producto.idProducto,
-            Precio: linea.producto.Precio,
-            Cantidad: parseInt(linea.cantidad, 10) || 1,
-            Total: linea.producto.Precio * (parseInt(linea.cantidad, 10) || 1),
-        };
-        if (!linea.id.startsWith('new-')) {
-            detallePayload.id = linea.id;
-        }
-        return detallePayload;
-      }),
+      detalles: detallesParaEnviar, // Enviar la lista simplificada
     };
 
     try {
