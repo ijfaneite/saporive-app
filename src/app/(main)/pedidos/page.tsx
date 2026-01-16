@@ -144,16 +144,16 @@ export default function PedidosPage() {
                                 <Badge variant={getStatusVariant(pedido.Status)} className="whitespace-nowrap text-xs">{pedido.Status}</Badge>
                             </CardHeader>
                             <CardContent className="p-2">
-                                <div className="grid gap-0 text-sm text-muted-foreground">
-                                    <p className="truncate" title={cliente?.Cliente}>
+                                <div className="grid gap-0 text-muted-foreground">
+                                    <p className="truncate text-xs font-bold" title={cliente?.Cliente}>
                                         {cliente?.Cliente || `ID: ${pedido.idCliente}`}
                                     </p>
-                                    <p>{pedido.Rif || cliente?.Rif || 'N/A'}</p>
+                                    <p className="truncate text-xs">{pedido.Rif || cliente?.Rif || 'N/A'}</p>
                                 </div>
                                 <div className="flex justify-between items-end mt-1">
                                     <div>
                                         <p className="text-xs text-muted-foreground">
-                                            {format(new Date(pedido.fechaPedido), "dd MMM yyyy", { locale: es })}
+                                            {format(new Date(pedido.fechaPedido), "dd/MMM/yyyy", { locale: es })}
                                         </p>
                                         <p className="text-lg font-bold text-destructive">{formatCurrency(pedido.totalPedido)}</p>
                                     </div>
