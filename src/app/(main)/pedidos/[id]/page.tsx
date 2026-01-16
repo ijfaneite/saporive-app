@@ -17,6 +17,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { cn } from '@/lib/utils';
 
 type LineaPedido = {
+  id: string;
   producto: Producto;
   cantidad: string;
 };
@@ -55,6 +56,7 @@ export default function EditarPedidoPage() {
         const lineas = data.detalles.map(detalle => {
             const producto = products.find(p => p.idProducto === detalle.idProducto);
             return {
+              id: detalle.id,
               producto: producto || { 
                   idProducto: detalle.idProducto, 
                   Producto: `(No disponible) ID: ${detalle.idProducto}`, 
@@ -115,34 +117,34 @@ export default function EditarPedidoPage() {
         });
         return currentLineas;
       }
-      return [...currentLineas, { producto, cantidad: "1" }];
+      return [...currentLineas, { id: `new-${Date.now()}`, producto, cantidad: "1" }];
     });
   };
 
-  const handleUpdateCantidad = (idProducto: string, cantidad: string) => {
+  const handleUpdateCantidad = (id: string, cantidad: string) => {
     if (cantidad === '' || (parseInt(cantidad) > 0)) {
         setLineasPedido(currentLineas =>
           currentLineas.map(linea =>
-            linea.producto.idProducto === idProducto ? { ...linea, cantidad: cantidad } : linea
+            linea.id === id ? { ...linea, cantidad: cantidad } : linea
           )
         );
     }
   };
   
-  const handleCantidadBlur = (idProducto: string, value: string) => {
+  const handleCantidadBlur = (id: string, value: string) => {
     const num = parseInt(value, 10);
     if (isNaN(num) || num < 1) {
         setLineasPedido(currentLineas =>
             currentLineas.map(linea =>
-              linea.producto.idProducto === idProducto ? { ...linea, cantidad: "1" } : linea
+              linea.id === id ? { ...linea, cantidad: "1" } : linea
             )
           );
     }
   }
 
-  const handleRemoveProducto = (idProducto: string) => {
+  const handleRemoveProducto = (id: string) => {
     setLineasPedido(currentLineas =>
-      currentLineas.filter(linea => linea.producto.idProducto !== idProducto)
+      currentLineas.filter(linea => linea.id !== id)
     );
   };
 
@@ -364,7 +366,7 @@ export default function EditarPedidoPage() {
               </TableHeader>
               <TableBody>
                 {lineasPedido.map(linea => (
-                  <TableRow key={linea.producto.idProducto}>
+                  <TableRow key={linea.id}>
                     <TableCell>
                         <div className={cn("font-medium", linea.producto.Producto.startsWith('(No disponible)') && 'text-destructive')}>
                             {linea.producto.Producto}
@@ -375,8 +377,8 @@ export default function EditarPedidoPage() {
                       <Input
                         type="number"
                         value={linea.cantidad}
-                        onChange={(e) => handleUpdateCantidad(linea.producto.idProducto, e.target.value)}
-                        onBlur={(e) => handleCantidadBlur(linea.producto.idProducto, e.target.value)}
+                        onChange={(e) => handleUpdateCantidad(linea.id, e.target.value)}
+                        onBlur={(e) => handleCantidadBlur(linea.id, e.target.value)}
                         className="text-center"
                         min="1"
                       />
@@ -385,7 +387,7 @@ export default function EditarPedidoPage() {
                       {formatCurrency(linea.producto.Precio * (parseInt(linea.cantidad, 10) || 0))}
                     </TableCell>
                     <TableCell>
-                      <Button variant="ghost" size="icon" onClick={() => handleRemoveProducto(linea.producto.idProducto)}>
+                      <Button variant="ghost" size="icon" onClick={() => handleRemoveProducto(linea.id)}>
                         <Trash2 className="text-destructive" />
                       </Button>
                     </TableCell>
@@ -408,5 +410,3 @@ export default function EditarPedidoPage() {
     </div>
   );
 }
-
-    
