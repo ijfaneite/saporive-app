@@ -58,13 +58,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     try {
       const storedToken = document.cookie.split('; ').find(row => row.startsWith('auth_token='))?.split('=')[1];
-      const storedUser = localStorage.getItem('user');
-      const storedAsesor = localStorage.getItem('asesor');
-      const storedAsesores = localStorage.getItem('asesores');
-      const storedClients = localStorage.getItem('clients');
-      const storedProducts = localStorage.getItem('products');
-      const storedEmpresas = localStorage.getItem('empresas');
-      const storedEmpresa = localStorage.getItem('empresa');
+      const storedUser = sessionStorage.getItem('user');
+      const storedAsesor = sessionStorage.getItem('asesor');
+      const storedAsesores = sessionStorage.getItem('asesores');
+      const storedClients = sessionStorage.getItem('clients');
+      const storedProducts = sessionStorage.getItem('products');
+      const storedEmpresas = sessionStorage.getItem('empresas');
+      const storedEmpresa = sessionStorage.getItem('empresa');
 
       if (storedToken) {
         setToken(storedToken);
@@ -114,12 +114,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         if (!clientesRes.ok) throw new Error('No se pudieron cargar los clientes');
         const clientesData: Cliente[] = await clientesRes.json();
         setClients(clientesData);
-        localStorage.setItem('clients', JSON.stringify(clientesData));
+        sessionStorage.setItem('clients', JSON.stringify(clientesData));
 
         if (!productosRes.ok) throw new Error('No se pudo cargar la lista de precios');
         const productosData: Producto[] = await productosRes.json();
         setProducts(productosData);
-        localStorage.setItem('products', JSON.stringify(productosData));
+        sessionStorage.setItem('products', JSON.stringify(productosData));
 
         if (!empresasRes.ok) throw new Error('No se pudieron cargar las empresas');
         const empresasData = await empresasRes.json();
@@ -130,12 +130,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             idEmpresa: String(e.idEmpresa),
         }));
         setEmpresas(formattedEmpresas);
-        localStorage.setItem('empresas', JSON.stringify(formattedEmpresas));
+        sessionStorage.setItem('empresas', JSON.stringify(formattedEmpresas));
 
         if (!asesoresRes.ok) throw new Error('No se pudieron cargar los asesores');
         const asesoresData: Asesor[] = await asesoresRes.json();
         setAsesores(asesoresData);
-        localStorage.setItem('asesores', JSON.stringify(asesoresData));
+        sessionStorage.setItem('asesores', JSON.stringify(asesoresData));
 
     } catch (error) {
         toast({
@@ -202,11 +202,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     const userData: User = await userResponse.json();
     setUser(userData);
-    localStorage.setItem('user', JSON.stringify(userData));
+    sessionStorage.setItem('user', JSON.stringify(userData));
 
     await syncData(access_token);
 
-    const storedEmpresa = localStorage.getItem('empresa');
+    const storedEmpresa = sessionStorage.getItem('empresa');
     if (storedEmpresa) {
       router.push('/pedidos');
     } else {
@@ -224,31 +224,31 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setEmpresas([]);
     setSelectedEmpresaState(null);
     eraseCookie('auth_token');
-    localStorage.removeItem('user');
-    localStorage.removeItem('asesor');
-    localStorage.removeItem('asesores');
-    localStorage.removeItem('clients');
-    localStorage.removeItem('products');
-    localStorage.removeItem('empresas');
-    localStorage.removeItem('empresa');
+    sessionStorage.removeItem('user');
+    sessionStorage.removeItem('asesor');
+    sessionStorage.removeItem('asesores');
+    sessionStorage.removeItem('clients');
+    sessionStorage.removeItem('products');
+    sessionStorage.removeItem('empresas');
+    sessionStorage.removeItem('empresa');
     router.push('/login');
   };
 
   const setAsesor = (asesor: Asesor) => {
     setAsesorState(asesor);
-    localStorage.setItem('asesor', JSON.stringify(asesor));
+    sessionStorage.setItem('asesor', JSON.stringify(asesor));
   };
   
   const setEmpresa = (empresa: Empresa) => {
     setSelectedEmpresaState(empresa);
-    localStorage.setItem('empresa', JSON.stringify(empresa));
+    sessionStorage.setItem('empresa', JSON.stringify(empresa));
   };
 
   const updateEmpresa = async (empresa: Empresa) => {
     console.log(`Simulating update for idPedido for ${empresa.RazonSocial} to ${empresa.idPedido}`);
     const updatedEmpresas = empresas.map(e => e.idEmpresa === empresa.idEmpresa ? empresa : e);
     setEmpresas(updatedEmpresas);
-    localStorage.setItem('empresas', JSON.stringify(updatedEmpresas));
+    sessionStorage.setItem('empresas', JSON.stringify(updatedEmpresas));
     if (selectedEmpresa?.idEmpresa === empresa.idEmpresa) {
         setEmpresa(empresa);
     }
