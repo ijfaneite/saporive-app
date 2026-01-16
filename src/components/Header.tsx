@@ -11,7 +11,7 @@ export function Header() {
   const logo = PlaceHolderImages.find(img => img.id === 'logo');
 
   return (
-    <header className="grid grid-cols-3 items-center p-3 bg-primary text-primary-foreground shadow-md font-headline">
+    <header className="grid grid-cols-[auto_1fr_auto] items-center gap-3 p-3 bg-primary text-primary-foreground shadow-md font-headline">
       {/* Left side */}
       <div className="flex items-center gap-2">
         {logo && (
@@ -27,8 +27,8 @@ export function Header() {
       </div>
       
       {/* Center */}
-      <div className="text-center font-semibold text-base truncate">
-        <span>{asesor?.Asesor || ''}</span>
+      <div className="text-center font-semibold text-base">
+        {asesor?.Asesor || ''}
       </div>
 
       {/* Right side */}
