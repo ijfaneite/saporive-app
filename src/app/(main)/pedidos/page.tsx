@@ -81,7 +81,7 @@ export default function PedidosPage() {
   }, [pedidos, searchTerm, getClienteName]);
 
   const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('es-VE', { style: 'currency', currency: 'VES' }).format(value);
+    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value);
   }
 
   const getStatusVariant = (status: string): "secondary" | "default" | "destructive" | "outline" | null | undefined => {
@@ -137,7 +137,7 @@ export default function PedidosPage() {
                         <CardHeader>
                             <div className="flex justify-between items-start gap-2">
                                 <div className='flex-grow min-w-0'>
-                                    <CardTitle className="text-lg font-semibold" title={pedido.idPedido}>
+                                    <CardTitle className="text-lg font-bold" title={pedido.idPedido}>
                                         {pedido.idPedido}
                                     </CardTitle>
                                     <p className="text-sm text-muted-foreground truncate" title={getClienteName(pedido.idCliente)}>
@@ -152,7 +152,7 @@ export default function PedidosPage() {
                         <CardContent>
                             <div className="flex justify-between items-end">
                                 <div>
-                                    <p className="text-sm text-muted-foreground">
+                                    <p className="text-xs text-muted-foreground">
                                         {format(new Date(pedido.fechaPedido), "dd MMM yyyy, HH:mm", { locale: es })}
                                     </p>
                                     <p className="text-lg font-bold text-primary">{formatCurrency(pedido.totalPedido)}</p>

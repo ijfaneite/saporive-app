@@ -26,7 +26,7 @@ export default function PreciosPage() {
   }, [searchTerm, products]);
   
   const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('es-VE', { style: 'currency', currency: 'VES' }).format(value);
+    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value);
   }
 
   return (
