@@ -10,6 +10,7 @@ interface AuthContextType {
   user: User | null;
   token: string | null;
   asesor: Asesor | null;
+  asesores: Asesor[];
   clients: Cliente[];
   products: Producto[];
   empresas: Empresa[];
@@ -44,6 +45,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [asesor, setAsesorState] = useState<Asesor | null>(null);
+  const [asesores, setAsesores] = useState<Asesor[]>([]);
   const [clients, setClients] = useState<Cliente[]>([]);
   const [products, setProducts] = useState<Producto[]>([]);
   const [empresas, setEmpresas] = useState<Empresa[]>([]);
@@ -58,6 +60,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const storedToken = document.cookie.split('; ').find(row => row.startsWith('auth_token='))?.split('=')[1];
       const storedUser = localStorage.getItem('user');
       const storedAsesor = localStorage.getItem('asesor');
+      const storedAsesores = localStorage.getItem('asesores');
       const storedClients = localStorage.getItem('clients');
       const storedProducts = localStorage.getItem('products');
       const storedEmpresas = localStorage.getItem('empresas');
@@ -67,6 +70,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setToken(storedToken);
         if (storedUser) setUser(JSON.parse(storedUser));
         if (storedAsesor) setAsesorState(JSON.parse(storedAsesor));
+        if (storedAsesores) setAsesores(JSON.parse(storedAsesores));
         if (storedClients) setClients(JSON.parse(storedClients));
         if (storedProducts) setProducts(JSON.parse(storedProducts));
         if (storedEmpresas) {
@@ -99,10 +103,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     };
     setIsSyncing(true);
     try {
-        const [clientesRes, productosRes, empresasRes] = await Promise.all([
+        const [clientesRes, productosRes, empresasRes, asesoresRes] = await Promise.all([
             fetch(`${API_BASE_URL}${API_ROUTES.clientes}`, { headers: { Authorization: `Bearer ${token}` } }),
             fetch(`${API_BASE_URL}${API_ROUTES.productos}`, { headers: { Authorization: `Bearer ${token}` } }),
             fetch(`${API_BASE_URL}${API_ROUTES.empresas}`, { headers: { Authorization: `Bearer ${token}` } }),
+            fetch(`${API_BASE_URL}${API_ROUTES.asesores}`, { headers: { Authorization: `Bearer ${token}` } }),
         ]);
 
         if (!clientesRes.ok) throw new Error('No se pudieron cargar los clientes');
@@ -125,6 +130,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }));
         setEmpresas(formattedEmpresas);
         localStorage.setItem('empresas', JSON.stringify(formattedEmpresas));
+
+        if (!asesoresRes.ok) throw new Error('No se pudieron cargar los asesores');
+        const asesoresData: Asesor[] = await asesoresRes.json();
+        setAsesores(asesoresData);
+        localStorage.setItem('asesores', JSON.stringify(asesoresData));
 
     } catch (error) {
         toast({
@@ -203,6 +213,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setUser(null);
     setToken(null);
     setAsesorState(null);
+    setAsesores([]);
     setClients([]);
     setProducts([]);
     setEmpresas([]);
@@ -210,6 +221,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     eraseCookie('auth_token');
     localStorage.removeItem('user');
     localStorage.removeItem('asesor');
+    localStorage.removeItem('asesores');
     localStorage.removeItem('clients');
     localStorage.removeItem('products');
     localStorage.removeItem('empresas');
@@ -238,7 +250,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, token, asesor, clients, products, empresas, selectedEmpresa, login, logout, setAsesor, setEmpresa, updateEmpresa, syncData, isLoading, isSyncing }}>
+    <AuthContext.Provider value={{ user, token, asesor, asesores, clients, products, empresas, selectedEmpresa, login, logout, setAsesor, setEmpresa, updateEmpresa, syncData, isLoading, isSyncing }}>
       {children}
     </AuthContext.Provider>
   );
