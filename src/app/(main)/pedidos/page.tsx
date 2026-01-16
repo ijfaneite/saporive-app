@@ -17,7 +17,7 @@ import { cn } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
 
 export default function PedidosPage() {
-  const { token, asesor, clients, empresas } = useAuth();
+  const { token, asesor, clients } = useAuth();
   const [pedidos, setPedidos] = useState<Pedido[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
@@ -61,12 +61,6 @@ export default function PedidosPage() {
   const getCliente = useCallback((idCliente: string) => {
     return clients.find(c => c.idCliente === idCliente);
   }, [clients]);
-
-  const getEmpresaName = useCallback((idEmpresa: number) => {
-    if (!empresas) return 'N/A';
-    const empresa = empresas.find(e => parseInt(e.idEmpresa, 10) === idEmpresa);
-    return empresa ? empresa.RazonSocial : 'N/A';
-  }, [empresas]);
 
   const filteredPedidos = useMemo(() => {
     return pedidos.filter(pedido => {
@@ -143,19 +137,18 @@ export default function PedidosPage() {
                     const cliente = getCliente(pedido.idCliente);
                     return (
                         <Card key={pedido.idPedido}>
-                            <CardHeader className="flex flex-row items-center justify-between p-4 pb-0">
+                            <CardHeader className="flex flex-row items-center justify-between p-2 pb-0">
                                 <CardTitle className="text-lg font-bold" title={pedido.idPedido}>
                                     {pedido.idPedido}
                                 </CardTitle>
                                 <Badge variant={getStatusVariant(pedido.Status)} className="whitespace-nowrap text-xs">{pedido.Status}</Badge>
                             </CardHeader>
-                            <CardContent className="p-4 grid gap-1">
+                            <CardContent className="p-2 grid gap-1">
                                 <div className="text-sm font-semibold text-foreground truncate" title={cliente?.Cliente}>
                                     {cliente?.Cliente || `ID: ${pedido.idCliente}`}
                                 </div>
                                 <div className="text-sm text-muted-foreground">
                                     <p>RIF: {pedido.Rif || cliente?.Rif || 'N/A'}</p>
-                                    <p className="truncate">Empresa: {getEmpresaName(pedido.idEmpresa)}</p>
                                 </div>
                                 <div className="flex justify-between items-end mt-2">
                                     <div>
