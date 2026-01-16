@@ -34,6 +34,7 @@ export interface Pedido {
   idAsesor: string;
   Status: string;
   idCliente: string;
+  Rif?: string;
   detalles: DetallePedido[];
 }
 

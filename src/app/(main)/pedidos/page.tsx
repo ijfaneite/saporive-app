@@ -6,7 +6,7 @@ import { Pedido } from '@/lib/types';
 import { API_BASE_URL, API_ROUTES } from '@/lib/config';
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PlusCircle, Loader2, RefreshCw, Pencil } from "lucide-react";
 import Link from 'next/link';
 import { format } from 'date-fns';
@@ -17,7 +17,7 @@ import { cn } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
 
 export default function PedidosPage() {
-  const { token, asesor, clients } = useAuth();
+  const { token, asesor, clients, empresas } = useAuth();
   const [pedidos, setPedidos] = useState<Pedido[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
@@ -58,18 +58,25 @@ export default function PedidosPage() {
     fetchPedidos();
   }, [fetchPedidos]);
 
-  const getClienteName = useCallback((idCliente: string) => {
-    const cliente = clients.find(c => c.idCliente === idCliente);
-    return cliente ? cliente.Cliente : `ID: ${idCliente.slice(0, 8)}`;
+  const getCliente = useCallback((idCliente: string) => {
+    return clients.find(c => c.idCliente === idCliente);
   }, [clients]);
+
+  const getEmpresaName = useCallback((idEmpresa: number) => {
+    if (!empresas) return 'N/A';
+    const empresa = empresas.find(e => parseInt(e.idEmpresa, 10) === idEmpresa);
+    return empresa ? empresa.RazonSocial : 'N/A';
+  }, [empresas]);
 
   const filteredPedidos = useMemo(() => {
     return pedidos.filter(pedido => {
         if (!searchTerm) return true;
         const lowerCaseSearch = searchTerm.toLowerCase();
+        const cliente = getCliente(pedido.idCliente);
 
-        const clienteName = getClienteName(pedido.idCliente).toLowerCase();
-        if (clienteName.includes(lowerCaseSearch)) return true;
+        if (cliente?.Cliente.toLowerCase().includes(lowerCaseSearch)) return true;
+        if (cliente?.Rif.toLowerCase().includes(lowerCaseSearch)) return true;
+        if (pedido.Rif?.toLowerCase().includes(lowerCaseSearch)) return true;
 
         if (pedido.idPedido.toLowerCase().includes(lowerCaseSearch)) return true;
         
@@ -78,7 +85,7 @@ export default function PedidosPage() {
         
         return false;
     });
-  }, [pedidos, searchTerm, getClienteName]);
+  }, [pedidos, searchTerm, getCliente]);
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value);
@@ -110,7 +117,7 @@ export default function PedidosPage() {
       </div>
 
       <Input 
-        placeholder="Buscar por cliente, ID o fecha..."
+        placeholder="Buscar por cliente, RIF, ID..."
         value={searchTerm}
         onChange={(e) => setSearchTerm(e.target.value)}
       />
@@ -132,40 +139,41 @@ export default function PedidosPage() {
       ) : (
         <ScrollArea className="flex-grow -mr-4">
             <div className="space-y-4 pr-4">
-                {filteredPedidos.map(pedido => (
-                    <Card key={pedido.idPedido}>
-                        <CardHeader>
-                            <div className="flex justify-between items-start gap-2">
-                                <div className='flex-grow min-w-0'>
-                                    <CardTitle className="text-lg font-bold" title={pedido.idPedido}>
-                                        {pedido.idPedido}
-                                    </CardTitle>
-                                    <p className="text-sm text-muted-foreground truncate" title={getClienteName(pedido.idCliente)}>
-                                        {getClienteName(pedido.idCliente)}
-                                    </p>
+                {filteredPedidos.map(pedido => {
+                    const cliente = getCliente(pedido.idCliente);
+                    return (
+                        <Card key={pedido.idPedido}>
+                            <CardHeader className="flex flex-row items-center justify-between p-4 pb-0">
+                                <CardTitle className="text-lg font-bold" title={pedido.idPedido}>
+                                    {pedido.idPedido}
+                                </CardTitle>
+                                <Badge variant={getStatusVariant(pedido.Status)} className="whitespace-nowrap text-xs">{pedido.Status}</Badge>
+                            </CardHeader>
+                            <CardContent className="p-4 grid gap-1">
+                                <div className="text-sm font-semibold text-foreground truncate" title={cliente?.Cliente}>
+                                    {cliente?.Cliente || `ID: ${pedido.idCliente}`}
                                 </div>
-                                <div className="flex items-center flex-shrink-0 gap-1">
-                                    <Badge variant={getStatusVariant(pedido.Status)} className="whitespace-nowrap text-xs">{pedido.Status}</Badge>
+                                <div className="text-sm text-muted-foreground">
+                                    <p>RIF: {pedido.Rif || cliente?.Rif || 'N/A'}</p>
+                                    <p className="truncate">Empresa: {getEmpresaName(pedido.idEmpresa)}</p>
                                 </div>
-                            </div>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="flex justify-between items-end">
-                                <div>
-                                    <p className="text-xs text-muted-foreground">
-                                        {format(new Date(pedido.fechaPedido), "dd MMM yyyy, HH:mm", { locale: es })}
-                                    </p>
-                                    <p className="text-lg font-bold text-primary">{formatCurrency(pedido.totalPedido)}</p>
+                                <div className="flex justify-between items-end mt-2">
+                                    <div>
+                                        <p className="text-xs text-muted-foreground">
+                                            {format(new Date(pedido.fechaPedido), "dd MMM yyyy", { locale: es })}
+                                        </p>
+                                        <p className="text-lg font-bold text-primary">{formatCurrency(pedido.totalPedido)}</p>
+                                    </div>
+                                    <Link href={`/pedidos/${pedido.idPedido}`} passHref>
+                                        <Button variant="outline" size="icon" aria-label="Editar Pedido">
+                                            <Pencil className="h-4 w-4" />
+                                        </Button>
+                                    </Link>
                                 </div>
-                                <Link href={`/pedidos/${pedido.idPedido}`} passHref>
-                                    <Button variant="outline" size="icon" aria-label="Editar Pedido">
-                                        <Pencil className="h-4 w-4" />
-                                    </Button>
-                                </Link>
-                            </div>
-                        </CardContent>
-                    </Card>
-                ))}
+                            </CardContent>
+                        </Card>
+                    )
+                })}
             </div>
         </ScrollArea>
       )}
