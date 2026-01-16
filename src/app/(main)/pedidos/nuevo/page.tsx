@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Loader2, PlusCircle, Trash2, ArrowLeft, ChevronsUpDown } from 'lucide-react';
+import { Loader2, PlusCircle, Trash2, ArrowLeft, ChevronsUpDown, Package, User } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import Link from 'next/link';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -229,29 +229,35 @@ export default function NuevoPedidoPage() {
   }, [selectedClientId, clients]);
 
   return (
-    <div className="p-2 space-y-4">
+    <div className="p-2 space-y-2">
        <div className="flex items-center gap-2">
         <Link href="/pedidos" passHref>
           <Button variant="outline" size="icon">
             <ArrowLeft />
           </Button>
         </Link>
-        <h1 className="text-2xl font-bold font-headline text-primary">Nuevo Pedido</h1>
+        <h1 className="text-xl font-bold font-headline text-primary">Nuevo Pedido</h1>
       </div>
 
       <Card>
-          <CardContent className='p-4 space-y-1 text-sm'>
-              <p><span className='font-semibold'>Nro. Pedido:</span> <span className='font-bold text-primary'>{idPedidoGenerado}</span></p>
-              <p><span className='font-semibold'>Asesor:</span> {asesor?.Asesor || 'No seleccionado'}</p>
+          <CardContent className='p-2 space-y-2 text-sm'>
+              <div className="flex items-center gap-2">
+                <Package className="h-5 w-5 text-muted-foreground" />
+                <span className="font-bold text-primary">{idPedidoGenerado}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <User className="h-5 w-5 text-muted-foreground" />
+                <span>{asesor?.Asesor || 'No seleccionado'}</span>
+              </div>
           </CardContent>
       </Card>
 
       <Card>
-        <CardHeader className="p-4">
+        <CardHeader className="p-2">
           <CardTitle className="text-lg">Cliente</CardTitle>
           <CardDescription>Busque y elija el cliente para este pedido.</CardDescription>
         </CardHeader>
-        <CardContent className="p-4 pt-0">
+        <CardContent className="p-2 pt-0">
           <Popover open={clientPopoverOpen} onOpenChange={setClientPopoverOpen}>
             <PopoverTrigger asChild>
               <Button variant="outline" role="combobox" aria-expanded={clientPopoverOpen} className="w-full justify-between font-normal">
@@ -290,11 +296,11 @@ export default function NuevoPedidoPage() {
       </Card>
 
       <Card>
-        <CardHeader className="p-4">
+        <CardHeader className="p-2">
           <CardTitle className="text-lg">Productos</CardTitle>
           <CardDescription>Busque y seleccione los productos para agregarlos al pedido.</CardDescription>
         </CardHeader>
-        <CardContent className="p-4 pt-0 space-y-4">
+        <CardContent className="p-2 pt-0 space-y-4">
             <Popover open={productPopoverOpen} onOpenChange={setProductPopoverOpen}>
                 <PopoverTrigger asChild>
                     <Button variant="outline" className="w-full justify-start font-normal">
@@ -338,11 +344,11 @@ export default function NuevoPedidoPage() {
 
       {lineasPedido.length > 0 && (
         <Card>
-          <CardHeader className="p-4">
+          <CardHeader className="p-2">
             <CardTitle className="text-lg">Revisar Pedido</CardTitle>
             <CardDescription>Ajuste las cantidades y revise el pedido antes de guardarlo.</CardDescription>
           </CardHeader>
-          <CardContent className="p-4 pt-0">
+          <CardContent className="p-2 pt-0">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -355,11 +361,11 @@ export default function NuevoPedidoPage() {
               <TableBody>
                 {lineasPedido.map(linea => (
                   <TableRow key={linea.producto.idProducto}>
-                    <TableCell className="p-2">
+                    <TableCell className="p-1">
                         <div className="font-medium">{linea.producto.Producto}</div>
                         <div className="text-sm text-muted-foreground">{formatCurrency(linea.producto.Precio)} c/u</div>
                     </TableCell>
-                    <TableCell className="p-2">
+                    <TableCell className="p-1">
                       <Input
                         type="number"
                         value={linea.cantidad}
@@ -369,10 +375,10 @@ export default function NuevoPedidoPage() {
                         min="1"
                       />
                     </TableCell>
-                    <TableCell className="text-right font-medium p-2">
+                    <TableCell className="text-right font-medium p-1">
                       {formatCurrency(linea.producto.Precio * (parseInt(linea.cantidad, 10) || 0))}
                     </TableCell>
-                    <TableCell className="p-2">
+                    <TableCell className="p-1">
                       <Button variant="ghost" size="icon" onClick={() => handleRemoveProducto(linea.producto.idProducto)}>
                         <Trash2 className="text-destructive" />
                       </Button>
@@ -382,7 +388,7 @@ export default function NuevoPedidoPage() {
               </TableBody>
             </Table>
           </CardContent>
-          <CardFooter className="flex-col items-end gap-2 p-4 pt-2">
+          <CardFooter className="flex-col items-end gap-2 p-2 pt-2">
             <div className="text-xl font-bold">
                 Total: <span className="text-primary">{formatCurrency(totalPedido)}</span>
             </div>
