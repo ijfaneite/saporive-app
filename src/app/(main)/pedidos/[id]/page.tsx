@@ -3,7 +3,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
-import { Producto, Pedido, DetallePedidoCreate } from '@/lib/types';
+import { Producto, Pedido, DetallePedidoBase, PedidoCreatePayload } from '@/lib/types';
 import { API_BASE_URL, API_ROUTES } from '@/lib/config';
 import { useToast } from "@/hooks/use-toast";
 import { Button } from '@/components/ui/button';
@@ -177,14 +177,13 @@ export default function EditarPedidoPage() {
 
     setIsSaving(true);
     
-    // El backend ahora espera una lista simple de detalles
-    const detallesParaEnviar: DetallePedidoCreate[] = lineasPedido.map(linea => ({
+    const detallesParaEnviar: DetallePedidoBase[] = lineasPedido.map(linea => ({
         idProducto: linea.producto.idProducto,
         Precio: linea.producto.Precio,
         Cantidad: parseInt(linea.cantidad, 10) || 1,
     }));
 
-    const pedidoPayload = {
+    const pedidoPayload: PedidoCreatePayload = {
       idPedido: pedido.idPedido,
       fechaPedido: new Date().toISOString(), // Usar fecha actual para la actualización
       totalPedido: totalPedido,
@@ -192,7 +191,7 @@ export default function EditarPedidoPage() {
       Status: pedido.Status,
       idCliente: selectedClientId,
       idEmpresa: parseInt(selectedEmpresa.idEmpresa, 10),
-      detalles: detallesParaEnviar, // Enviar la lista simplificada
+      detalles: detallesParaEnviar,
     };
 
     try {

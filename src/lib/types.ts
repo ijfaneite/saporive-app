@@ -1,7 +1,8 @@
+// --- Basic & Auth ---
 export interface User {
   username: string;
-  createdAt: string;
-  updatedAt: string;
+  createdAt: string; // ISO-8601 string
+  updatedAt: string; // ISO-8601 string
 }
 
 export interface Token {
@@ -9,6 +10,7 @@ export interface Token {
   token_type: string;
 }
 
+// --- Empresa ---
 export interface Empresa {
   idEmpresa: string;
   RazonSocial: string;
@@ -16,15 +18,17 @@ export interface Empresa {
   idRecibo: number;
 }
 
+// --- Asesor ---
 export interface Asesor {
   idAsesor: string;
   Asesor: string;
-  createdAt?: string;
+  createdAt?: string; // Optional because it's None in Base
   updatedAt?: string;
   createdBy?: string;
   updatedBy?: string;
 }
 
+// --- Producto ---
 export interface Producto {
   idProducto: string;
   Producto: string;
@@ -35,6 +39,7 @@ export interface Producto {
   updatedBy?: string;
 }
 
+// --- Cliente ---
 export interface Cliente {
   idCliente: string;
   Cliente: string;
@@ -48,31 +53,48 @@ export interface Cliente {
   updatedBy?: string;
 }
 
-export interface DetallePedido {
-  id: string;
-  idPedido: string;
-  idProducto: string;
-  Precio: number;
-  Cantidad: number;
-  Total: number;
-  producto?: Producto;
-  createdAt: string;
-  updatedAt: string;
-  createdBy: string;
-  updatedBy: string;
-}
 
-// Para la creación, la API espera un formato más simple para los detalles
-export interface DetallePedidoCreate {
+// --- PEDIDO & DETALLES: Payloads for Creation/Update ---
+
+// Corresponds to schemas.DetallePedidoBase
+export interface DetallePedidoBase {
     idProducto: string;
     Precio: number;
     Cantidad: number;
 }
 
+// Corresponds to schemas.PedidoCreate
+export interface PedidoCreatePayload {
+    idPedido: string;
+    idEmpresa: number;
+    fechaPedido: string; // ISO-8601 string
+    totalPedido: number;
+    idAsesor: string;
+    idCliente: string;
+    Status: string;
+    detalles: DetallePedidoBase[];
+}
+
+
+// --- PEDIDO & DETALLES: Response shapes from API ---
+
+// Corresponds to schemas.DetallePedido
+export interface DetallePedido extends DetallePedidoBase {
+  id: string;
+  idPedido: string;
+  Total: number;
+  producto?: Producto;
+  createdAt: string; // ISO-8601 string
+  updatedAt: string; // ISO-8601 string
+  createdBy: string;
+  updatedBy: string;
+}
+
+// Corresponds to schemas.Pedido
 export interface Pedido {
   idPedido: string;
   idEmpresa: number;
-  fechaPedido: string;
+  fechaPedido: string; // ISO-8601 string
   totalPedido: number;
   idAsesor: string;
   idCliente: string;
@@ -81,13 +103,12 @@ export interface Pedido {
   asesor?: Asesor;
   cliente?: Cliente;
   detalles: DetallePedido[];
-  createdAt: string;
-  updatedAt: string;
+  createdAt: string; // ISO-8601 string
+  updatedAt: string; // ISO-8601 string
   createdBy: string;
   updatedBy: string;
 }
 
-// Para la creación, la API espera que los detalles sean del tipo DetallePedidoCreate
-export interface PedidoCreate extends Omit<Pedido, 'detalles' | 'createdAt' | 'updatedAt' | 'createdBy' | 'updatedBy' | 'asesor' | 'cliente'> {
-    detalles: DetallePedidoCreate[];
-}
+// Backward compatibility for old code if it exists.
+export type DetallePedidoCreate = DetallePedidoBase;
+export type PedidoCreate = PedidoCreatePayload;

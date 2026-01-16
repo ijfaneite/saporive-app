@@ -3,7 +3,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
-import { Producto, Empresa, DetallePedidoCreate } from '@/lib/types';
+import { Producto, Empresa, DetallePedidoBase, PedidoCreatePayload } from '@/lib/types';
 import { API_BASE_URL, API_ROUTES } from '@/lib/config';
 import { useToast } from "@/hooks/use-toast";
 import { Button } from '@/components/ui/button';
@@ -140,13 +140,13 @@ export default function NuevoPedidoPage() {
 
     setIsSaving(true);
     
-    const detallesParaEnviar: DetallePedidoCreate[] = lineasPedido.map(linea => ({
+    const detallesParaEnviar: DetallePedidoBase[] = lineasPedido.map(linea => ({
         idProducto: linea.producto.idProducto,
         Precio: linea.producto.Precio,
         Cantidad: parseInt(linea.cantidad, 10) || 1,
     }));
 
-    const pedidoPayload = {
+    const pedidoPayload: PedidoCreatePayload = {
       idPedido: idPedidoGenerado,
       fechaPedido: new Date().toISOString(),
       totalPedido: totalPedido,
