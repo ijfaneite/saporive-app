@@ -20,7 +20,7 @@ interface AuthContextType {
   setAsesor: (asesor: Asesor) => void;
   setEmpresa: (empresa: Empresa) => void;
   updateEmpresa: (empresa: Empresa) => Promise<void>;
-  syncData: () => Promise<void>;
+  syncData: (tokenOverride?: string) => Promise<void>;
   isLoading: boolean;
   isSyncing: boolean;
 }
@@ -92,8 +92,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   }, []);
 
-  const syncData = useCallback(async () => {
-    if (!token) {
+  const syncData = useCallback(async (tokenOverride?: string) => {
+    const currentToken = tokenOverride || token;
+    if (!currentToken) {
         toast({
             variant: "destructive",
             title: "Error de autenticación",
@@ -104,10 +105,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setIsSyncing(true);
     try {
         const [clientesRes, productosRes, empresasRes, asesoresRes] = await Promise.all([
-            fetch(`${API_BASE_URL}${API_ROUTES.clientes}`, { headers: { Authorization: `Bearer ${token}` } }),
-            fetch(`${API_BASE_URL}${API_ROUTES.productos}`, { headers: { Authorization: `Bearer ${token}` } }),
-            fetch(`${API_BASE_URL}${API_ROUTES.empresas}`, { headers: { Authorization: `Bearer ${token}` } }),
-            fetch(`${API_BASE_URL}${API_ROUTES.asesores}`, { headers: { Authorization: `Bearer ${token}` } }),
+            fetch(`${API_BASE_URL}${API_ROUTES.clientes}`, { headers: { Authorization: `Bearer ${currentToken}` } }),
+            fetch(`${API_BASE_URL}${API_ROUTES.productos}`, { headers: { Authorization: `Bearer ${currentToken}` } }),
+            fetch(`${API_BASE_URL}${API_ROUTES.empresas}`, { headers: { Authorization: `Bearer ${currentToken}` } }),
+            fetch(`${API_BASE_URL}${API_ROUTES.asesores}`, { headers: { Authorization: `Bearer ${currentToken}` } }),
         ]);
 
         if (!clientesRes.ok) throw new Error('No se pudieron cargar los clientes');
@@ -203,10 +204,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setUser(userData);
     localStorage.setItem('user', JSON.stringify(userData));
 
-    await syncData();
+    await syncData(access_token);
 
-    router.push('/pedidos');
-    router.refresh();
+    const storedEmpresa = localStorage.getItem('empresa');
+    if (storedEmpresa) {
+      router.push('/pedidos');
+    } else {
+      router.push('/configuracion');
+    }
   };
 
   const logout = () => {
