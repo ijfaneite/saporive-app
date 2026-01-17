@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { User, Asesor, Token, Cliente, Producto, Empresa } from '@/lib/types';
+import { User, Asesor, Token, Cliente, Producto, Empresa, PedidoCreatePayload, DetallePedidoBase } from '@/lib/types';
 import { API_BASE_URL, API_ROUTES } from '@/lib/config';
 import { useToast } from '@/hooks/use-toast';
 
@@ -75,6 +75,26 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const router = useRouter();
   const { toast } = useToast();
 
+  const logout = useCallback(() => {
+    setUser(null);
+    setToken(null);
+    setAsesorState(null);
+    setAsesores([]);
+    setClients([]);
+    setProducts([]);
+    setEmpresas([]);
+    setSelectedEmpresaState(null);
+    eraseCookie('auth_token');
+    localStorage.removeItem('user');
+    localStorage.removeItem('asesor');
+    localStorage.removeItem('asesores');
+    localStorage.removeItem('clients');
+    localStorage.removeItem('products');
+    localStorage.removeItem('empresas');
+    localStorage.removeItem('empresa');
+    router.push('/login');
+  }, [router]);
+
   useEffect(() => {
     try {
       const storedToken = getCookie('auth_token');
@@ -136,12 +156,26 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     };
     setIsSyncing(true);
     try {
-        const [clientesRes, productosRes, empresasRes, asesoresRes] = await Promise.all([
+        const responses = await Promise.all([
             fetch(`${API_BASE_URL}${API_ROUTES.clientes}`, { headers: { Authorization: `Bearer ${currentToken}` } }),
             fetch(`${API_BASE_URL}${API_ROUTES.productos}`, { headers: { Authorization: `Bearer ${currentToken}` } }),
             fetch(`${API_BASE_URL}${API_ROUTES.empresas}`, { headers: { Authorization: `Bearer ${currentToken}` } }),
             fetch(`${API_BASE_URL}${API_ROUTES.asesores}`, { headers: { Authorization: `Bearer ${currentToken}` } }),
         ]);
+
+        for (const response of responses) {
+            if (response.status === 401) {
+                toast({
+                    variant: "destructive",
+                    title: "Sesión expirada",
+                    description: "Su sesión ha expirado. Por favor, inicie sesión de nuevo.",
+                });
+                logout();
+                return;
+            }
+        }
+        
+        const [clientesRes, productosRes, empresasRes, asesoresRes] = responses;
 
         if (!clientesRes.ok) throw new Error('No se pudieron cargar los clientes');
         const clientesData: Cliente[] = await clientesRes.json();
@@ -192,7 +226,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     } finally {
         setIsSyncing(false);
     }
-}, [token, toast]);
+}, [token, toast, logout]);
 
   const login = async (username: string, password: string) => {
     let response;
@@ -213,7 +247,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         throw new Error("Login - No se pudo conectar al servidor de autenticación.");
     }
     
-    if (!response.ok) {
+    if (response.status === 401 || !response.ok) {
         const errorBody = await response.json().catch(() => ({ detail: 'Usuario o clave incorrectos.' }));
         throw new Error(errorBody.detail || 'Usuario o clave incorrectos.');
     }
@@ -230,9 +264,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         });
     } catch (error) {
         console.error("Error fetching user:", error);
+        logout();
         throw new Error("Token - No se pudo conectar con el servidor para obtener los datos del usuario.");
     }
 
+    if (userResponse.status === 401) {
+        logout();
+        throw new Error("Token de autenticación inválido.");
+    }
+    
     if (!userResponse.ok) {
         let errorMessage = 'No se pudieron obtener los datos del usuario desde el servidor.';
         try {
@@ -261,27 +301,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       router.push('/configuracion');
     }
   };
-
-  const logout = () => {
-    setUser(null);
-    setToken(null);
-    setAsesorState(null);
-    setAsesores([]);
-    setClients([]);
-    setProducts([]);
-    setEmpresas([]);
-    setSelectedEmpresaState(null);
-    eraseCookie('auth_token');
-    localStorage.removeItem('user');
-    localStorage.removeItem('asesor');
-    localStorage.removeItem('asesores');
-    localStorage.removeItem('clients');
-    localStorage.removeItem('products');
-    localStorage.removeItem('empresas');
-    localStorage.removeItem('empresa');
-    router.push('/login');
-  };
-
+  
   const setAsesor = (asesor: Asesor) => {
     setAsesorState(asesor);
     localStorage.setItem('asesor', JSON.stringify(asesor));

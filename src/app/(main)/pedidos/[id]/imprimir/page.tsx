@@ -10,7 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { format } from 'date-fns';
 
 export default function ImprimirPedidoPage() {
-  const { token, asesor, clients, products, selectedEmpresa, isLoading: isAuthLoading } = useAuth();
+  const { token, asesor, clients, products, selectedEmpresa, isLoading: isAuthLoading, logout } = useAuth();
   const params = useParams();
   const { toast } = useToast();
 
@@ -29,6 +29,12 @@ export default function ImprimirPedidoPage() {
           headers: { Authorization: `Bearer ${token}` },
         });
 
+        if (response.status === 401) {
+            toast({ variant: 'destructive', title: 'Sesión expirada', description: 'Inicie sesión de nuevo.' });
+            logout();
+            return;
+        }
+
         if (!response.ok) {
           throw new Error('No se pudo cargar el pedido para imprimir.');
         }
@@ -46,7 +52,7 @@ export default function ImprimirPedidoPage() {
     };
 
     fetchPedido();
-  }, [orderId, token, toast, isAuthLoading]);
+  }, [orderId, token, toast, isAuthLoading, logout]);
 
   useEffect(() => {
     if (!isLoading && pedido) {
@@ -122,8 +128,7 @@ export default function ImprimirPedidoPage() {
                 </tr>
             </thead>
             <tbody>
-              {pedido.detalles.map((detalle) => {
-                return (
+              {pedido.detalles.map((detalle) => (
                   <React.Fragment key={detalle.id}>
                     <tr>
                       <td colSpan={4} className="text-left pt-1 uppercase">
@@ -142,8 +147,7 @@ export default function ImprimirPedidoPage() {
                       </td>
                     </tr>
                   </React.Fragment>
-                );
-              })}
+                ))}
             </tbody>
         </table>
         

@@ -16,7 +16,7 @@ import { cn } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
 
 export default function PedidosPage() {
-  const { token, asesor, clients } = useAuth();
+  const { token, asesor, clients, logout } = useAuth();
   const [pedidos, setPedidos] = useState<Pedido[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
@@ -31,6 +31,12 @@ export default function PedidosPage() {
       const pedidosRes = await fetch(`${API_BASE_URL}${API_ROUTES.pedidos}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
+
+      if (pedidosRes.status === 401) {
+        toast({ variant: 'destructive', title: 'Sesión expirada', description: 'Por favor inicie sesión de nuevo.' });
+        logout();
+        return;
+      }
 
       if (!pedidosRes.ok) throw new Error('No se pudieron cargar los pedidos');
       
@@ -51,7 +57,7 @@ export default function PedidosPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [token, asesor, toast]);
+  }, [token, asesor, toast, logout]);
   
   useEffect(() => {
     fetchPedidos();

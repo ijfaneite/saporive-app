@@ -24,7 +24,7 @@ type LineaPedido = {
 };
 
 export default function EditarPedidoPage() {
-  const { token, asesor, clients, products, selectedEmpresa } = useAuth();
+  const { token, asesor, clients, products, selectedEmpresa, logout } = useAuth();
   const router = useRouter();
   const params = useParams();
   const { toast } = useToast();
@@ -47,6 +47,12 @@ export default function EditarPedidoPage() {
           headers: { Authorization: `Bearer ${token}` },
         });
 
+        if (response.status === 401) {
+            toast({ variant: 'destructive', title: 'Sesión expirada', description: 'Inicie sesión de nuevo.' });
+            logout();
+            return;
+        }
+
         if (!response.ok) {
           throw new Error('No se pudo cargar el pedido.');
         }
@@ -61,7 +67,11 @@ export default function EditarPedidoPage() {
               producto: producto || { 
                   idProducto: detalle.idProducto, 
                   Producto: `(No disponible) ID: ${detalle.idProducto}`, 
-                  Precio: detalle.Precio 
+                  Precio: detalle.Precio,
+                  createdAt: '',
+                  updatedAt: '',
+                  createdBy: '',
+                  updatedBy: '',
                 },
               cantidad: String(detalle.Cantidad),
             };
@@ -82,7 +92,7 @@ export default function EditarPedidoPage() {
     };
 
     fetchPedido();
-  }, [orderId, token, products, router, toast]);
+  }, [orderId, token, products, router, toast, logout]);
 
   // Client Combobox states
   const [clientPopoverOpen, setClientPopoverOpen] = useState(false);
@@ -203,6 +213,13 @@ export default function EditarPedidoPage() {
         },
         body: JSON.stringify(pedidoPayload),
       });
+
+      if (response.status === 401) {
+        toast({ variant: 'destructive', title: 'Sesión expirada', description: 'Inicie sesión de nuevo.' });
+        logout();
+        setIsSaving(false);
+        return;
+      }
 
       if (!response.ok) {
         const errorData = await response.json();

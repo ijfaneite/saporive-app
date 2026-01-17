@@ -22,7 +22,7 @@ type LineaPedido = {
 };
 
 export default function NuevoPedidoPage() {
-  const { token, asesor, clients, products, selectedEmpresa, updateEmpresaInState } = useAuth();
+  const { token, asesor, clients, products, selectedEmpresa, updateEmpresaInState, logout } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
 
@@ -167,6 +167,13 @@ export default function NuevoPedidoPage() {
         body: JSON.stringify(pedidoPayload),
       });
 
+      if (response.status === 401) {
+        toast({ variant: 'destructive', title: 'Sesión expirada', description: 'Inicie sesión de nuevo.' });
+        logout();
+        setIsSaving(false);
+        return;
+      }
+
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.detail || 'No se pudo guardar el pedido.');
@@ -183,6 +190,12 @@ export default function NuevoPedidoPage() {
                 },
                 body: JSON.stringify(selectedEmpresa),
             });
+            
+            if (incrementResponse.status === 401) {
+                toast({ variant: 'destructive', title: 'Sesión expirada', description: 'El pedido se guardó, pero su sesión expiró. Inicie sesión de nuevo.' });
+                logout();
+                return;
+            }
 
             if (incrementResponse.ok) {
                 const updatedEmpresaData: Empresa = await incrementResponse.json();
