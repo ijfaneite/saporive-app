@@ -237,11 +237,12 @@ export default function PedidosPage() {
     return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value);
   }
 
-  const getStatusVariant = (status: string): 'destructive' | 'success' | 'secondary' | 'warning' => {
+  const getStatusVariant = (status: string): 'destructive' | 'success' | 'secondary' | 'warning' | 'info' => {
     const s = status.toLowerCase();
     if (s === 'pendiente') return 'destructive';
     if (s === 'enviado') return 'success';
     if (s === 'modificado') return 'warning';
+    if (s === 'impreso') return 'info';
     return 'secondary';
   }
 

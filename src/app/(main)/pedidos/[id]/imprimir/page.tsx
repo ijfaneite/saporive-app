@@ -23,7 +23,7 @@ export default function ImprimirPedidoPage() {
 
   const orderId = params.id as string;
 
-  const updateStatusToEnviado = useCallback(async (): Promise<boolean> => {
+  const updateStatusToImpreso = useCallback(async (): Promise<boolean> => {
     if (!token || !pedido || !asesor || !selectedEmpresa) {
         toast({
             variant: "destructive",
@@ -33,8 +33,9 @@ export default function ImprimirPedidoPage() {
         return false;
     }
 
-    if (pedido.Status.toLowerCase() === 'enviado') {
-      return true; // Already sent, no need to update
+    const currentStatus = pedido.Status.toLowerCase();
+    if (currentStatus === 'impreso' || currentStatus === 'enviado') {
+      return true; // Already processed, no need to update
     }
 
     const detallesParaEnviar: DetallePedidoBase[] = pedido.detalles.map(linea => ({
@@ -48,7 +49,7 @@ export default function ImprimirPedidoPage() {
       fechaPedido: pedido.fechaPedido,
       totalPedido: pedido.totalPedido,
       idAsesor: pedido.idAsesor,
-      Status: "Enviado",
+      Status: "Impreso",
       idCliente: pedido.idCliente,
       idEmpresa: pedido.idEmpresa,
       detalles: detallesParaEnviar,
@@ -73,15 +74,15 @@ export default function ImprimirPedidoPage() {
       if (response.ok) {
          toast({
             title: 'Estado Actualizado',
-            description: 'El pedido se ha marcado como "Enviado".'
+            description: 'El pedido se ha marcado como "Impreso".'
         });
         return true;
       } else {
-        const errorData = await response.json().catch(() => ({ detail: 'No se pudo cambiar el estado del pedido a "Enviado".' }));
+        const errorData = await response.json().catch(() => ({ detail: 'No se pudo cambiar el estado del pedido a "Impreso".' }));
         toast({
             variant: 'destructive',
             title: 'Error al actualizar',
-            description: errorData.detail || 'No se pudo cambiar el estado del pedido a "Enviado".'
+            description: errorData.detail || 'No se pudo cambiar el estado del pedido a "Impreso".'
         });
         return false;
       }
@@ -138,8 +139,9 @@ export default function ImprimirPedidoPage() {
     document.title = `Pedido-${pedido.idPedido}`;
 
     const handleAfterPrint = async () => {
-      if (pedido.Status.toLowerCase() !== 'enviado') {
-        await updateStatusToEnviado();
+      const currentStatus = pedido.Status.toLowerCase();
+      if (currentStatus !== 'enviado' && currentStatus !== 'impreso') {
+        await updateStatusToImpreso();
       }
       window.close();
     };
@@ -151,7 +153,7 @@ export default function ImprimirPedidoPage() {
     return () => {
       window.removeEventListener('afterprint', handleAfterPrint);
     };
-  }, [isAuthLoading, isLoading, pedido, updateStatusToEnviado]);
+  }, [isAuthLoading, isLoading, pedido, updateStatusToImpreso]);
 
   const cliente = useMemo(() => {
     if (!pedido) return null;
