@@ -7,6 +7,7 @@ import { API_BASE_URL, API_ROUTES } from '@/lib/config';
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { PlusCircle, Loader2, RefreshCw, Pencil, Printer } from "lucide-react";
 import Link from 'next/link';
 import { format } from 'date-fns';
@@ -76,8 +77,8 @@ export default function PedidosPage() {
         if (cliente?.Cliente.toLowerCase().includes(lowerCaseSearch)) return true;
         if (cliente?.Rif.toLowerCase().includes(lowerCaseSearch)) return true;
         if (pedido.Rif?.toLowerCase().includes(lowerCaseSearch)) return true;
-
         if (pedido.idPedido.toLowerCase().includes(lowerCaseSearch)) return true;
+        if (pedido.Status.toLowerCase().includes(lowerCaseSearch)) return true;
         
         const fecha = format(new Date(pedido.fechaPedido), "dd MMM yyyy", { locale: es }).toLowerCase();
         if (fecha.includes(lowerCaseSearch)) return true;
@@ -108,7 +109,7 @@ export default function PedidosPage() {
       </div>
 
       <Input 
-        placeholder="Buscar por cliente, RIF, ID..."
+        placeholder="Buscar por cliente, RIF, ID, status..."
         value={searchTerm}
         onChange={(e) => setSearchTerm(e.target.value)}
       />
@@ -134,21 +135,31 @@ export default function PedidosPage() {
                     const cliente = getCliente(pedido.idCliente);
                     return (
                         <Card key={pedido.idPedido}>
-                            <CardContent className="p-2 pt-0">
-                                <div className="grid gap-0">
-                                    <p className="font-bold text-foreground" title={pedido.idPedido}>
-                                        {pedido.idPedido}
-                                    </p>
-                                    <p className="truncate text-xs text-muted-foreground" title={cliente?.Cliente}>
-                                        {cliente?.Cliente || `ID: ${pedido.idCliente}`}
-                                    </p>
-                                    <p className="truncate text-xs text-muted-foreground">{pedido.Rif || cliente?.Rif || 'N/A'}</p>
-                                    <p className="text-xs text-muted-foreground">
-                                        {format(new Date(pedido.fechaPedido), "dd/MMM/yyyy", { locale: es })}
-                                    </p>
+                            <CardContent className="p-3">
+                                <div className="grid grid-cols-[1fr_auto] gap-x-2">
+                                    <div>
+                                        <p className="font-bold text-foreground truncate" title={pedido.idPedido}>
+                                            {pedido.idPedido}
+                                        </p>
+                                        <p className="truncate text-sm text-muted-foreground" title={cliente?.Cliente}>
+                                            {cliente?.Cliente || `ID: ${pedido.idCliente}`}
+                                        </p>
+                                        <p className="truncate text-xs text-muted-foreground">{pedido.Rif || cliente?.Rif || 'N/A'}</p>
+                                    </div>
+                                    <div className='text-right'>
+                                      <p className="text-xs text-muted-foreground">
+                                          {format(new Date(pedido.fechaPedido), "dd/MMM/yyyy", { locale: es })}
+                                      </p>
+                                      <Badge 
+                                        variant={pedido.Status.toLowerCase() === 'pendiente' ? 'destructive' : 'secondary'}
+                                        className="mt-1"
+                                      >
+                                        {pedido.Status}
+                                      </Badge>
+                                    </div>
                                 </div>
-                                <div className="flex justify-between items-end mt-1">
-                                    <p className="text-lg font-bold text-destructive">{formatCurrency(pedido.totalPedido)}</p>
+                                <div className="flex justify-between items-end mt-2">
+                                    <p className="text-xl font-bold text-primary">{formatCurrency(pedido.totalPedido)}</p>
                                     <div className="flex items-center gap-2">
                                         <Link href={`/pedidos/${pedido.idPedido}/imprimir`} passHref legacyBehavior>
                                             <a target="_blank" rel="noopener noreferrer">

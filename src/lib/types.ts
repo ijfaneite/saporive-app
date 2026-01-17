@@ -79,9 +79,12 @@ export interface PedidoCreatePayload {
 // --- PEDIDO & DETALLES: Response shapes from API ---
 
 // Corresponds to schemas.DetallePedido
-export interface DetallePedido extends DetallePedidoBase {
+export interface DetallePedido {
   id: string;
   idPedido: string;
+  idProducto: string;
+  Precio: number;
+  Cantidad: number;
   Total: number;
   producto?: Producto;
   createdAt: string; // ISO-8601 string

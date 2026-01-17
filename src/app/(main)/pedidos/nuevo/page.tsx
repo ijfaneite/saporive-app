@@ -3,7 +3,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
-import { Producto, Empresa, DetallePedidoBase, PedidoCreatePayload } from '@/lib/types';
+import { Producto, DetallePedidoBase, PedidoCreatePayload } from '@/lib/types';
 import { API_BASE_URL, API_ROUTES } from '@/lib/config';
 import { useToast } from "@/hooks/use-toast";
 import { Button } from '@/components/ui/button';
@@ -121,6 +121,16 @@ export default function NuevoPedidoPage() {
   }
 
   const handleSavePedido = async () => {
+    // --- VALIDACIONES ---
+    if (!token) {
+        toast({
+            variant: "destructive",
+            title: "Error de Autenticación",
+            description: "No se ha encontrado el token. Por favor, inicie sesión de nuevo.",
+        });
+        logout();
+        return;
+    }
     if (!selectedClientId) {
       toast({ variant: "destructive", title: "Faltan datos", description: "Por favor, seleccione un cliente." });
       return;
@@ -129,17 +139,14 @@ export default function NuevoPedidoPage() {
       toast({ variant: "destructive", title: "Pedido inválido", description: "Agregue productos y asegúrese de que las cantidades no sean cero." });
       return;
     }
-    if (!asesor) {
-        toast({ variant: "destructive", title: "Error", description: "No se ha seleccionado un asesor." });
-        return;
-    }
-    if (!selectedEmpresa) {
-        toast({ variant: "destructive", title: "Error", description: "No se ha seleccionado una empresa." });
+    if (!asesor || !selectedEmpresa) {
+        toast({ variant: "destructive", title: "Error de configuración", description: "No se ha seleccionado un asesor o una empresa." });
         return;
     }
 
     setIsSaving(true);
     
+    // --- CONSTRUCCIÓN DEL PAYLOAD ---
     const detallesParaEnviar: DetallePedidoBase[] = lineasPedido.map(linea => ({
         idProducto: linea.producto.idProducto,
         Precio: linea.producto.Precio,
@@ -151,12 +158,13 @@ export default function NuevoPedidoPage() {
       fechaPedido: new Date().toISOString(),
       totalPedido: totalPedido,
       idAsesor: asesor.idAsesor,
-      Status: "Pendiente",
+      Status: "Pendiente", // STATUS AÑADIDO
       idCliente: selectedClientId,
       idEmpresa: selectedEmpresa.idEmpresa,
       detalles: detallesParaEnviar,
     };
 
+    // --- LLAMADA A LA API ---
     try {
       const response = await fetch(`${API_BASE_URL}${API_ROUTES.pedidos}`, {
         method: 'POST',
@@ -175,51 +183,44 @@ export default function NuevoPedidoPage() {
       }
 
       if (!response.ok) {
-        const errorData = await response.json();
+        const errorData = await response.json().catch(() => ({ detail: 'Error desconocido del servidor.' }));
         throw new Error(errorData.detail || 'No se pudo guardar el pedido.');
       }
       
-      // Increment counter on success
-      if (selectedEmpresa) {
-        try {
-            const incrementResponse = await fetch(`${API_BASE_URL}${API_ROUTES.updateEmpresaPedido}${selectedEmpresa.idEmpresa}`, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                    Authorization: `Bearer ${token}`,
-                },
-                body: JSON.stringify(selectedEmpresa),
-            });
-            
-            if (incrementResponse.status === 401) {
-                toast({ variant: 'destructive', title: 'Sesión expirada', description: 'El pedido se guardó, pero su sesión expiró. Inicie sesión de nuevo.' });
-                logout();
-                return;
-            }
-
-            if (incrementResponse.ok) {
-                const updatedEmpresaData: Empresa = await incrementResponse.json();
-                updateEmpresaInState(updatedEmpresaData);
-            } else {
-                toast({
-                    variant: "destructive",
-                    title: "Advertencia de Sincronización",
-                    description: "El pedido se guardó, pero el contador de pedidos no pudo actualizarse. Por favor, sincronice manualmente.",
-                });
-            }
-        } catch (e) {
-             toast({
-                variant: "destructive",
-                title: "Error de Sincronización",
-                description: "El pedido se guardó, pero hubo un error al actualizar el contador.",
-            });
-        }
-      }
-      
+      // --- LÓGICA POST-GUARDADO EXITOSO ---
       toast({
         title: "Pedido Guardado",
         description: "El nuevo pedido se ha creado exitosamente.",
       });
+
+      // Increment counter on success (fire-and-forget, with error handling)
+      if (selectedEmpresa) {
+         fetch(`${API_BASE_URL}${API_ROUTES.updateEmpresaPedido}${selectedEmpresa.idEmpresa}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                body: JSON.stringify({ idPedido: selectedEmpresa.idPedido + 1 }),
+            })
+            .then(async (res) => {
+                if(res.ok) {
+                    const updatedEmpresa = await res.json();
+                    updateEmpresaInState(updatedEmpresa);
+                } else {
+                     toast({
+                        variant: "destructive",
+                        title: "Advertencia de Sincronización",
+                        description: "El pedido se guardó, pero el contador de pedidos no pudo actualizarse.",
+                    });
+                }
+            })
+            .catch(() => {
+                toast({
+                    variant: "destructive",
+                    title: "Error de Sincronización",
+                    description: "El pedido se guardó, pero hubo un error al actualizar el contador.",
+                });
+            })
+      }
+      
       router.push('/pedidos');
 
     } catch (error) {
@@ -411,7 +412,6 @@ export default function NuevoPedidoPage() {
           </CardFooter>
         </Card>
       )}
-
     </div>
   );
 }

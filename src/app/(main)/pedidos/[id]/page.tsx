@@ -68,10 +68,6 @@ export default function EditarPedidoPage() {
                   idProducto: detalle.idProducto, 
                   Producto: `(No disponible) ID: ${detalle.idProducto}`, 
                   Precio: detalle.Precio,
-                  createdAt: '',
-                  updatedAt: '',
-                  createdBy: '',
-                  updatedBy: '',
                 },
               cantidad: String(detalle.Cantidad),
             };
@@ -172,6 +168,16 @@ export default function EditarPedidoPage() {
   }
 
   const handleUpdatePedido = async () => {
+    // --- VALIDACIONES ---
+    if (!token) {
+        toast({
+            variant: "destructive",
+            title: "Error de Autenticación",
+            description: "No se ha encontrado el token. Por favor, inicie sesión de nuevo.",
+        });
+        logout();
+        return;
+    }
     if (!selectedClientId || !pedido) {
       toast({ variant: "destructive", title: "Faltan datos", description: "Por favor, seleccione un cliente." });
       return;
@@ -181,12 +187,13 @@ export default function EditarPedidoPage() {
       return;
     }
     if (!asesor || !selectedEmpresa) {
-        toast({ variant: "destructive", title: "Error", description: "No se ha seleccionado un asesor o empresa." });
+        toast({ variant: "destructive", title: "Error de configuración", description: "No se ha seleccionado un asesor o empresa." });
         return;
     }
 
     setIsSaving(true);
     
+    // --- CONSTRUCCIÓN DEL PAYLOAD ---
     const detallesParaEnviar: DetallePedidoBase[] = lineasPedido.map(linea => ({
         idProducto: linea.producto.idProducto,
         Precio: linea.producto.Precio,
@@ -198,12 +205,13 @@ export default function EditarPedidoPage() {
       fechaPedido: new Date().toISOString(), // Usar fecha actual para la actualización
       totalPedido: totalPedido,
       idAsesor: asesor.idAsesor,
-      Status: pedido.Status,
+      Status: pedido.Status, // Se mantiene el status actual del pedido
       idCliente: selectedClientId,
       idEmpresa: selectedEmpresa.idEmpresa,
       detalles: detallesParaEnviar,
     };
 
+    // --- LLAMADA A LA API ---
     try {
       const response = await fetch(`${API_BASE_URL}${API_ROUTES.pedidos}${orderId}`, {
         method: 'PUT',
@@ -222,7 +230,7 @@ export default function EditarPedidoPage() {
       }
 
       if (!response.ok) {
-        const errorData = await response.json();
+        const errorData = await response.json().catch(() => ({ detail: 'Error desconocido del servidor.' }));
         throw new Error(errorData.detail || 'No se pudo actualizar el pedido.');
       }
       
