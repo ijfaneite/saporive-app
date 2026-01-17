@@ -117,13 +117,14 @@ export default function NuevoPedidoPage() {
   };
 
   return (
-    <div>
-       <div className="flex items-center gap-2 p-2">
+    <div className="p-4 space-y-4">
+       <div className="flex items-center gap-4">
         <Link href="/pedidos" passHref>
           <Button variant="outline" size="icon">
             <ArrowLeft />
           </Button>
         </Link>
+        <h1 className="text-2xl font-bold font-headline text-primary">Nuevo Pedido</h1>
       </div>
       <PedidoForm 
         mode="nuevo"

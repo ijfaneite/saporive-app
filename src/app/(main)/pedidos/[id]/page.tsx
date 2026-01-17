@@ -126,13 +126,14 @@ export default function EditarPedidoPage() {
   }
 
   return (
-    <div>
-        <div className="flex items-center gap-2 p-2">
+    <div className="p-4 space-y-4">
+        <div className="flex items-center gap-4">
             <Link href="/pedidos" passHref>
                 <Button variant="outline" size="icon">
                     <ArrowLeft />
                 </Button>
             </Link>
+            <h1 className="text-2xl font-bold font-headline text-primary">Editar Pedido</h1>
         </div>
         <PedidoForm 
             mode="editar"
