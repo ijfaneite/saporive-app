@@ -23,14 +23,14 @@ export default function ImprimirPedidoPage() {
 
   const orderId = params.id as string;
 
-  const updateStatusToImpreso = useCallback(async () => {
+  const updateStatusToImpreso = useCallback(async (): Promise<boolean> => {
     if (!token || !pedido || !asesor || !selectedEmpresa) {
         toast({
             variant: "destructive",
             title: "Error de Sincronización",
             description: "No se pudo actualizar el estado del pedido a 'Impreso'.",
         });
-        return;
+        return false;
     }
 
     const detallesParaEnviar: DetallePedidoBase[] = pedido.detalles.map(linea => ({
@@ -63,7 +63,7 @@ export default function ImprimirPedidoPage() {
       if (response.status === 401) {
         toast({ variant: 'destructive', title: 'Sesión expirada', description: 'Inicie sesión de nuevo.' });
         logout();
-        return;
+        return false;
       }
 
       if (response.ok) {
@@ -71,12 +71,15 @@ export default function ImprimirPedidoPage() {
             title: 'Estado Actualizado',
             description: 'El pedido se ha marcado como "Impreso".'
         });
+        return true;
       } else {
+        const errorData = await response.json().catch(() => ({ detail: 'No se pudo cambiar el estado del pedido a "Impreso".' }));
         toast({
             variant: 'destructive',
             title: 'Error al actualizar',
-            description: 'No se pudo cambiar el estado del pedido a "Impreso".'
+            description: errorData.detail || 'No se pudo cambiar el estado del pedido a "Impreso".'
         });
+        return false;
       }
     } catch (error) {
       toast({
@@ -84,8 +87,9 @@ export default function ImprimirPedidoPage() {
         title: "Error de Conexión",
         description: "No se pudo comunicar con el servidor para actualizar el estado.",
       });
+      return false;
     }
-}, [pedido, token, asesor, selectedEmpresa, toast, logout]);
+  }, [pedido, token, asesor, selectedEmpresa, toast, logout]);
 
   useEffect(() => {
     if (isAuthLoading || !orderId || !token) return;
@@ -121,30 +125,29 @@ export default function ImprimirPedidoPage() {
 
     fetchPedido();
   }, [orderId, token, toast, isAuthLoading, logout]);
-
+  
   useEffect(() => {
-    if (!isLoading && pedido) {
-      document.title = `Pedido-${pedido.idPedido}`;
-      const timer = setTimeout(() => {
-        window.print();
-        if (pedido.Status !== 'Impreso') {
-          updateStatusToImpreso();
-        }
-      }, 500);
-      return () => clearTimeout(timer);
+    if (isAuthLoading || isLoading || !pedido) {
+      return;
     }
-  }, [isLoading, pedido, updateStatusToImpreso]);
 
-  useEffect(() => {
-    const handleAfterPrint = () => {
+    document.title = `Pedido-${pedido.idPedido}`;
+
+    const handleAfterPrint = async () => {
+      if (pedido.Status !== 'Impreso') {
+        await updateStatusToImpreso();
+      }
       window.close();
     };
 
     window.addEventListener('afterprint', handleAfterPrint);
+    
+    window.print();
+
     return () => {
       window.removeEventListener('afterprint', handleAfterPrint);
     };
-  }, []);
+  }, [isAuthLoading, isLoading, pedido, updateStatusToImpreso]);
 
   const cliente = useMemo(() => {
     if (!pedido) return null;
