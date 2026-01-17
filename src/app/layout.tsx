@@ -4,8 +4,8 @@ import {Toaster} from '@/components/ui/toaster';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'SaporiMobile',
-  description: 'Sapori.ve Mobile App',
+  title: 'saporive-app',
+  description: 'saporive-app',
 };
 
 export default function RootLayout({

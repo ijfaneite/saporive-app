@@ -207,7 +207,7 @@ export function PedidoForm({ mode, initialPedido, idPedidoGenerado, onSave, isSa
                             autoFocus
                         />
                     </div>
-                    <ScrollArea className="h-64">
+                    <ScrollArea className="h-56">
                         <div className="p-1">
                             {filteredClients.length > 0 ? filteredClients.map((cliente) => (
                                 <div key={cliente.idCliente} 
@@ -250,7 +250,7 @@ export function PedidoForm({ mode, initialPedido, idPedidoGenerado, onSave, isSa
                                         autoFocus
                                     />
                                 </div>
-                                <ScrollArea className="h-64">
+                                <ScrollArea className="h-56">
                                     <div className="p-1">
                                     {filteredProducts.length > 0 ? filteredProducts.map(p => (
                                         <div key={p.idProducto} 
