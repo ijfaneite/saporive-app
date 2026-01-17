@@ -150,8 +150,8 @@ export default function PedidosPage() {
           </Link>
         </div>
       ) : (
-        <ScrollArea className="flex-grow -mr-4">
-            <div className="space-y-4 pr-4">
+        <ScrollArea className="flex-grow">
+            <div className="space-y-4">
                 {filteredPedidos.map(pedido => {
                     const cliente = getCliente(pedido.idCliente);
                     return (

@@ -117,7 +117,7 @@ export default function NuevoPedidoPage() {
   };
 
   return (
-    <div className="p-4 space-y-4">
+    <div className="p-6 space-y-4">
        <div className="flex items-center gap-4">
         <Link href="/pedidos" passHref>
           <Button variant="outline" size="icon">
