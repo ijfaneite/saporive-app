@@ -61,7 +61,22 @@ export default function PedidosPage() {
   }, [token, asesor, toast, logout]);
   
   useEffect(() => {
+    // Fetch on mount
     fetchPedidos();
+
+    // Set up an event listener to refetch when the window gains focus.
+    // This is useful for when the user prints a pedido (which opens a new tab)
+    // and then comes back to this tab.
+    const handleFocus = () => {
+      fetchPedidos();
+    };
+
+    window.addEventListener('focus', handleFocus);
+
+    // Clean up the event listener when the component unmounts
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+    };
   }, [fetchPedidos]);
 
   const getCliente = useCallback((idCliente: string) => {
