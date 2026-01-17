@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Loader2, PlusCircle, Trash2, ArrowLeft, ChevronsUpDown } from 'lucide-react';
+import { Loader2, PlusCircle, Trash2, ArrowLeft, ChevronsUpDown, Package, User } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import Link from 'next/link';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -266,32 +266,33 @@ export default function EditarPedidoPage() {
   }
 
   return (
-    <div className="p-4 space-y-6">
-       <div className="flex items-center gap-4">
+    <div className="p-2 space-y-2">
+       <div className="flex items-center gap-2">
         <Link href="/pedidos" passHref>
           <Button variant="outline" size="icon">
             <ArrowLeft />
           </Button>
         </Link>
-        <h1 className="text-3xl font-bold font-headline text-primary">Editar Pedido</h1>
       </div>
 
       <Card>
-          <CardHeader>
-              <CardTitle>Información del Pedido</CardTitle>
-          </CardHeader>
-          <CardContent className='space-y-2 text-sm'>
-              <p><span className='font-semibold'>Nro. Pedido:</span> <span className="font-bold text-primary">{pedido?.idPedido}</span></p>
-              <p><span className='font-semibold'>Asesor:</span> {asesor?.Asesor || 'No seleccionado'}</p>
+          <CardContent className='p-2 space-y-2 text-sm'>
+              <div className="flex items-center gap-2">
+                <Package className="h-5 w-5 text-muted-foreground" />
+                <span className="font-bold text-lg text-primary">{pedido?.idPedido}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <User className="h-5 w-5 text-muted-foreground" />
+                <span>{asesor?.Asesor || 'No seleccionado'}</span>
+              </div>
           </CardContent>
       </Card>
 
       <Card>
-        <CardHeader>
-          <CardTitle>Cliente</CardTitle>
-          <CardDescription>Busque y elija el cliente para este pedido.</CardDescription>
+        <CardHeader className="p-2">
+          <CardTitle className="text-lg">Cliente</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-2 pt-0">
           <Popover open={clientPopoverOpen} onOpenChange={setClientPopoverOpen}>
             <PopoverTrigger asChild>
               <Button variant="outline" role="combobox" aria-expanded={clientPopoverOpen} className="w-full justify-between font-normal">
@@ -330,11 +331,10 @@ export default function EditarPedidoPage() {
       </Card>
 
       <Card>
-        <CardHeader>
-          <CardTitle>Productos</CardTitle>
-          <CardDescription>Busque y seleccione los productos para agregarlos al pedido.</CardDescription>
+        <CardHeader className="p-2">
+          <CardTitle className="text-lg">Productos</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="p-2 pt-0 space-y-4">
             <Popover open={productPopoverOpen} onOpenChange={setProductPopoverOpen}>
                 <PopoverTrigger asChild>
                     <Button variant="outline" className="w-full justify-start font-normal">
@@ -378,11 +378,11 @@ export default function EditarPedidoPage() {
 
       {lineasPedido.length > 0 && (
         <Card>
-          <CardHeader>
-            <CardTitle>Revisar Pedido</CardTitle>
+          <CardHeader className="p-2">
+            <CardTitle className="text-lg">Revisar Pedido</CardTitle>
             <CardDescription>Ajuste las cantidades y revise el pedido antes de guardarlo.</CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-2 pt-0">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -395,13 +395,13 @@ export default function EditarPedidoPage() {
               <TableBody>
                 {lineasPedido.map(linea => (
                   <TableRow key={linea.id}>
-                    <TableCell>
+                    <TableCell className="p-1">
                         <div className={cn("font-medium", linea.producto.Producto.startsWith('(No disponible)') && 'text-destructive')}>
                             {linea.producto.Producto}
                         </div>
                         <div className="text-sm text-muted-foreground">{formatCurrency(linea.producto.Precio)} c/u</div>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="p-1">
                       <Input
                         type="number"
                         value={linea.cantidad}
@@ -411,10 +411,10 @@ export default function EditarPedidoPage() {
                         min="1"
                       />
                     </TableCell>
-                    <TableCell className="text-right font-medium">
+                    <TableCell className="text-right font-medium p-1">
                       {formatCurrency(linea.producto.Precio * (parseInt(linea.cantidad, 10) || 0))}
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="p-1">
                       <Button variant="ghost" size="icon" onClick={() => handleRemoveProducto(linea.id)}>
                         <Trash2 className="text-destructive" />
                       </Button>
@@ -424,11 +424,16 @@ export default function EditarPedidoPage() {
               </TableBody>
             </Table>
           </CardContent>
-          <CardFooter className="flex-col items-end gap-2">
-            <div className="text-xl font-bold">
-                Total: <span className="text-primary">{formatCurrency(totalPedido)}</span>
+          <CardFooter className="flex flex-col gap-2 p-2 pt-2">
+            <div className="flex justify-between items-center w-full">
+                <div className="text-xl font-bold">
+                    Nro. Items: <span className="text-primary">{lineasPedido.length}</span>
+                </div>
+                <div className="text-xl font-bold">
+                    Total: <span className="text-primary">{formatCurrency(totalPedido)}</span>
+                </div>
             </div>
-            <Button onClick={handleUpdatePedido} disabled={isSaving} className="w-full sm:w-auto">
+            <Button onClick={handleUpdatePedido} disabled={isSaving} className="w-full">
               {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Guardar Cambios
             </Button>
