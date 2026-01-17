@@ -105,10 +105,11 @@ export default function PedidosPage() {
     return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value);
   }
 
-  const getStatusVariant = (status: string): 'destructive' | 'info' | 'secondary' => {
+  const getStatusVariant = (status: string): 'destructive' | 'info' | 'secondary' | 'warning' => {
     const s = status.toLowerCase();
     if (s === 'pendiente') return 'destructive';
     if (s === 'impreso') return 'info';
+    if (s === 'modificado') return 'warning';
     return 'secondary';
   }
 
@@ -151,7 +152,7 @@ export default function PedidosPage() {
         </div>
       ) : (
         <ScrollArea className="flex-grow">
-            <div className="space-y-4">
+            <div className="space-y-4 pr-4">
                 {filteredPedidos.map(pedido => {
                     const cliente = getCliente(pedido.idCliente);
                     return (

@@ -155,7 +155,7 @@ export function PedidoForm({ mode, initialPedido, idPedidoGenerado, onSave, isSa
           fechaPedido: new Date().toISOString(),
           totalPedido: totalPedido,
           idAsesor: asesor.idAsesor,
-          Status: mode === 'nuevo' ? "Pendiente" : initialPedido!.Status,
+          Status: mode === 'nuevo' ? "Pendiente" : "Modificado",
           idCliente: selectedClientId,
           idEmpresa: selectedEmpresa.idEmpresa,
           detalles: detallesParaEnviar,
