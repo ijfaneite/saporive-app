@@ -119,10 +119,10 @@ export default function ImprimirPedidoPage() {
                 <h1 className="text-xl font-bold mt-2">{selectedEmpresa?.RazonSocial || 'Sapori.ve'}</h1>
             </div>
 
-            {/* Right side: Date and Order Number */}
+            {/* Right side: Order Number and Date */}
             <div className="text-right">
-                <p>{format(new Date(pedido.fechaPedido), "dd/MMM/yyyy", { locale: es })}</p>
-                <p className="text-lg font-bold mt-2">Pedido Nro.: {pedido.idPedido}</p>
+                <p className="text-lg font-bold">Pedido Nro.: {pedido.idPedido}</p>
+                <p className="mt-2">{format(new Date(pedido.fechaPedido), "dd/MMM/yyyy", { locale: es })}</p>
             </div>
         </div>
 
