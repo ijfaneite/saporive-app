@@ -34,8 +34,8 @@ export function PedidoShareImage({ pedido }: PedidoShareImageProps) {
                     <Image
                         src={logo.imageUrl}
                         alt={logo.description}
-                        width={110}
-                        height={60}
+                        width={120}
+                        height={50}
                         data-ai-hint={logo.imageHint}
                         unoptimized
                     />
