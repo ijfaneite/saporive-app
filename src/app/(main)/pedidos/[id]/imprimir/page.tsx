@@ -186,7 +186,7 @@ export default function ImprimirPedidoPage() {
                         src={logo.imageUrl}
                         alt={logo.description}
                         width={120}
-                        height={120}
+                        height={50}
                         data-ai-hint={logo.imageHint}
                         unoptimized
                     />
