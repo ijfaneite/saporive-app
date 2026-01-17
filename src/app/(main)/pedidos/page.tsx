@@ -83,7 +83,7 @@ export default function PedidosPage() {
     };
   }, [fetchPedidos]);
 
-  const updateStatusToImpreso = useCallback(async (pedidoToUpdate: Pedido): Promise<void> => {
+  const updateStatusToEnviado = useCallback(async (pedidoToUpdate: Pedido): Promise<void> => {
     if (!token || !asesor) {
         toast({
             variant: "destructive",
@@ -91,6 +91,10 @@ export default function PedidosPage() {
             description: "No se pudo actualizar el estado del pedido.",
         });
         return;
+    }
+    
+    if (pedidoToUpdate.Status.toLowerCase() === 'enviado' || pedidoToUpdate.Status.toLowerCase() === 'impreso') {
+        return; // Already sent, no need to update
     }
 
     const detallesParaEnviar: DetallePedidoBase[] = pedidoToUpdate.detalles.map(linea => ({
@@ -104,7 +108,7 @@ export default function PedidosPage() {
       fechaPedido: new Date().toISOString(),
       totalPedido: pedidoToUpdate.totalPedido,
       idAsesor: pedidoToUpdate.idAsesor,
-      Status: "Impreso",
+      Status: "Enviado",
       idCliente: pedidoToUpdate.idCliente,
       idEmpresa: pedidoToUpdate.idEmpresa,
       detalles: detallesParaEnviar,
@@ -129,7 +133,7 @@ export default function PedidosPage() {
       if (response.ok) {
         toast({
            title: 'Estado Actualizado',
-           description: 'El pedido se ha marcado como "Impreso".'
+           description: 'El pedido se ha marcado como "Enviado".'
        });
        fetchPedidos();
       } else {
@@ -174,7 +178,7 @@ export default function PedidosPage() {
                     title: `Pedido ${sharingPedido.idPedido}`,
                     text: `Adjunto el pedido ${sharingPedido.idPedido}.`,
                   });
-                  await updateStatusToImpreso(sharingPedido);
+                  await updateStatusToEnviado(sharingPedido);
                 } catch (error) {
                   console.info("Share cancelled by user", error);
                 }
@@ -190,7 +194,7 @@ export default function PedidosPage() {
                   title: 'Imagen descargada',
                   description: 'La imagen del pedido se ha guardado en tu dispositivo.',
                 });
-                await updateStatusToImpreso(sharingPedido);
+                await updateStatusToEnviado(sharingPedido);
               }
             });
           })
@@ -204,7 +208,7 @@ export default function PedidosPage() {
           });
       }, 500);
     }
-  }, [sharingPedido, updateStatusToImpreso, toast]);
+  }, [sharingPedido, updateStatusToEnviado, toast]);
 
   const getCliente = useCallback((idCliente: string) => {
     return clients.find(c => c.idCliente === idCliente);
@@ -233,10 +237,10 @@ export default function PedidosPage() {
     return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value);
   }
 
-  const getStatusVariant = (status: string): 'destructive' | 'info' | 'secondary' | 'warning' => {
+  const getStatusVariant = (status: string): 'destructive' | 'success' | 'secondary' | 'warning' => {
     const s = status.toLowerCase();
     if (s === 'pendiente') return 'destructive';
-    if (s === 'impreso') return 'info';
+    if (s === 'enviado' || s === 'impreso') return 'success';
     if (s === 'modificado') return 'warning';
     return 'secondary';
   }

@@ -23,14 +23,18 @@ export default function ImprimirPedidoPage() {
 
   const orderId = params.id as string;
 
-  const updateStatusToImpreso = useCallback(async (): Promise<boolean> => {
+  const updateStatusToEnviado = useCallback(async (): Promise<boolean> => {
     if (!token || !pedido || !asesor || !selectedEmpresa) {
         toast({
             variant: "destructive",
             title: "Error de Sincronización",
-            description: "No se pudo actualizar el estado del pedido a 'Impreso'.",
+            description: "No se pudo actualizar el estado del pedido.",
         });
         return false;
+    }
+
+    if (pedido.Status.toLowerCase() === 'enviado' || pedido.Status.toLowerCase() === 'impreso') {
+      return true; // Already sent, no need to update
     }
 
     const detallesParaEnviar: DetallePedidoBase[] = pedido.detalles.map(linea => ({
@@ -44,7 +48,7 @@ export default function ImprimirPedidoPage() {
       fechaPedido: new Date().toISOString(),
       totalPedido: pedido.totalPedido,
       idAsesor: pedido.idAsesor,
-      Status: "Impreso",
+      Status: "Enviado",
       idCliente: pedido.idCliente,
       idEmpresa: pedido.idEmpresa,
       detalles: detallesParaEnviar,
@@ -69,15 +73,15 @@ export default function ImprimirPedidoPage() {
       if (response.ok) {
          toast({
             title: 'Estado Actualizado',
-            description: 'El pedido se ha marcado como "Impreso".'
+            description: 'El pedido se ha marcado como "Enviado".'
         });
         return true;
       } else {
-        const errorData = await response.json().catch(() => ({ detail: 'No se pudo cambiar el estado del pedido a "Impreso".' }));
+        const errorData = await response.json().catch(() => ({ detail: 'No se pudo cambiar el estado del pedido a "Enviado".' }));
         toast({
             variant: 'destructive',
             title: 'Error al actualizar',
-            description: errorData.detail || 'No se pudo cambiar el estado del pedido a "Impreso".'
+            description: errorData.detail || 'No se pudo cambiar el estado del pedido a "Enviado".'
         });
         return false;
       }
@@ -134,8 +138,8 @@ export default function ImprimirPedidoPage() {
     document.title = `Pedido-${pedido.idPedido}`;
 
     const handleAfterPrint = async () => {
-      if (pedido.Status !== 'Impreso') {
-        await updateStatusToImpreso();
+      if (pedido.Status.toLowerCase() !== 'enviado' && pedido.Status.toLowerCase() !== 'impreso') {
+        await updateStatusToEnviado();
       }
       window.close();
     };
@@ -147,7 +151,7 @@ export default function ImprimirPedidoPage() {
     return () => {
       window.removeEventListener('afterprint', handleAfterPrint);
     };
-  }, [isAuthLoading, isLoading, pedido, updateStatusToImpreso]);
+  }, [isAuthLoading, isLoading, pedido, updateStatusToEnviado]);
 
   const cliente = useMemo(() => {
     if (!pedido) return null;
