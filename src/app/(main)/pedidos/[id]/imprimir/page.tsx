@@ -33,7 +33,7 @@ export default function ImprimirPedidoPage() {
         return false;
     }
 
-    if (pedido.Status.toLowerCase() === 'enviado' || pedido.Status.toLowerCase() === 'impreso') {
+    if (pedido.Status.toLowerCase() === 'enviado') {
       return true; // Already sent, no need to update
     }
 
@@ -138,7 +138,7 @@ export default function ImprimirPedidoPage() {
     document.title = `Pedido-${pedido.idPedido}`;
 
     const handleAfterPrint = async () => {
-      if (pedido.Status.toLowerCase() !== 'enviado' && pedido.Status.toLowerCase() !== 'impreso') {
+      if (pedido.Status.toLowerCase() !== 'enviado') {
         await updateStatusToEnviado();
       }
       window.close();

@@ -93,7 +93,7 @@ export default function PedidosPage() {
         return;
     }
     
-    if (pedidoToUpdate.Status.toLowerCase() === 'enviado' || pedidoToUpdate.Status.toLowerCase() === 'impreso') {
+    if (pedidoToUpdate.Status.toLowerCase() === 'enviado') {
         return; // Already sent, no need to update
     }
 
@@ -240,7 +240,7 @@ export default function PedidosPage() {
   const getStatusVariant = (status: string): 'destructive' | 'success' | 'secondary' | 'warning' => {
     const s = status.toLowerCase();
     if (s === 'pendiente') return 'destructive';
-    if (s === 'enviado' || s === 'impreso') return 'success';
+    if (s === 'enviado') return 'success';
     if (s === 'modificado') return 'warning';
     return 'secondary';
   }
