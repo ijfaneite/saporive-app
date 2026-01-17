@@ -190,7 +190,7 @@ export default function EditarPedidoPage() {
       idAsesor: asesor.idAsesor,
       Status: pedido.Status,
       idCliente: selectedClientId,
-      idEmpresa: parseInt(selectedEmpresa.idEmpresa, 10),
+      idEmpresa: selectedEmpresa.idEmpresa,
       detalles: detallesParaEnviar,
     };
 

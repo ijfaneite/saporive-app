@@ -12,7 +12,7 @@ export interface Token {
 
 // --- Empresa ---
 export interface Empresa {
-  idEmpresa: string;
+  idEmpresa: number;
   RazonSocial: string;
   idPedido: number;
   idRecibo: number;

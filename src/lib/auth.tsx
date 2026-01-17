@@ -154,20 +154,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         localStorage.setItem('products', JSON.stringify(productosData));
 
         if (!empresasRes.ok) throw new Error('No se pudieron cargar las empresas');
-        const empresasData = await empresasRes.json();
-        const formattedEmpresas: Empresa[] = empresasData.map((e: any) => ({
-            RazonSocial: e.RazonSocial,
-            idPedido: e.idPedido,
-            idRecibo: e.idRecibo,
-            idEmpresa: String(e.idEmpresa),
-        }));
-        setEmpresas(formattedEmpresas);
-        localStorage.setItem('empresas', JSON.stringify(formattedEmpresas));
+        const empresasData: Empresa[] = await empresasRes.json();
+        setEmpresas(empresasData);
+        localStorage.setItem('empresas', JSON.stringify(empresasData));
         
         const localEmpresa = localStorage.getItem('empresa');
         if(localEmpresa) {
           const parsedEmpresa = JSON.parse(localEmpresa) as Empresa;
-          const freshEmpresa = formattedEmpresas.find(e => e.idEmpresa === parsedEmpresa.idEmpresa);
+          const freshEmpresa = empresasData.find(e => e.idEmpresa === parsedEmpresa.idEmpresa);
           if (freshEmpresa) {
             setSelectedEmpresaState(freshEmpresa);
             localStorage.setItem('empresa', JSON.stringify(freshEmpresa));

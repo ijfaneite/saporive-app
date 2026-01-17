@@ -153,7 +153,7 @@ export default function NuevoPedidoPage() {
       idAsesor: asesor.idAsesor,
       Status: "Pendiente",
       idCliente: selectedClientId,
-      idEmpresa: parseInt(selectedEmpresa.idEmpresa, 10),
+      idEmpresa: selectedEmpresa.idEmpresa,
       detalles: detallesParaEnviar,
     };
 
@@ -186,11 +186,7 @@ export default function NuevoPedidoPage() {
 
             if (incrementResponse.ok) {
                 const updatedEmpresaData: Empresa = await incrementResponse.json();
-                const formattedUpdatedEmpresa = {
-                    ...updatedEmpresaData,
-                    idEmpresa: String(updatedEmpresaData.idEmpresa),
-                };
-                updateEmpresaInState(formattedUpdatedEmpresa);
+                updateEmpresaInState(updatedEmpresaData);
             } else {
                 toast({
                     variant: "destructive",
