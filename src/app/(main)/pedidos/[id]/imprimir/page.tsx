@@ -124,6 +124,7 @@ export default function ImprimirPedidoPage() {
 
   useEffect(() => {
     if (!isLoading && pedido) {
+      document.title = `Pedido-${pedido.idPedido}`;
       const timer = setTimeout(() => {
         window.print();
         if (pedido.Status !== 'Impreso') {
