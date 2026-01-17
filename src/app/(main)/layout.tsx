@@ -13,11 +13,19 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
   const router = useRouter();
   const pathname = usePathname();
 
+  const isPrintPage = pathname.includes('/imprimir');
+
   useEffect(() => {
-    if (!isLoading && user && !selectedEmpresa && pathname !== '/configuracion') {
+    // No redirigir si estamos en la página de configuración o de impresión
+    if (!isLoading && user && !selectedEmpresa && pathname !== '/configuracion' && !isPrintPage) {
       router.replace('/configuracion');
     }
-  }, [isLoading, user, selectedEmpresa, pathname, router]);
+  }, [isLoading, user, selectedEmpresa, pathname, router, isPrintPage]);
+
+  // Para la página de impresión, mostramos solo el contenido, sin layout
+  if (isPrintPage) {
+    return <>{children}</>;
+  }
 
   if (isLoading) {
     return (

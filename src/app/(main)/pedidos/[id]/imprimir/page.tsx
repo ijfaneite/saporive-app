@@ -104,7 +104,7 @@ export default function ImprimirPedidoPage() {
   return (
     <div className="bg-white text-black p-8 font-sans text-sm">
         {/* Header section */}
-        <div className="flex justify-between items-start mb-4 border-b pb-4">
+        <div className="flex justify-between items-start mb-4 border-b border-gray-400 pb-4">
             {/* Left side: Logo and Company Name */}
             <div>
                 {logo && (
@@ -121,7 +121,7 @@ export default function ImprimirPedidoPage() {
 
             {/* Right side: Order Number and Date */}
             <div className="text-right">
-                <p className="text-lg font-bold">Pedido Nro.: {pedido.idPedido}</p>
+                <p className="text-lg font-bold text-black">Pedido Nro.: {pedido.idPedido}</p>
                 <p className="mt-2">{format(new Date(pedido.fechaPedido), "dd/MMM/yyyy", { locale: es })}</p>
             </div>
         </div>
@@ -144,7 +144,7 @@ export default function ImprimirPedidoPage() {
 
         {/* Details Table */}
         <table className="w-full text-left table-auto">
-            <thead className="border-b bg-gray-100">
+            <thead className="border-b border-gray-400 bg-gray-100">
                 <tr>
                     <th className="p-2">Item</th>
                     <th className="p-2 w-2/5">Producto</th>
@@ -157,7 +157,7 @@ export default function ImprimirPedidoPage() {
               {pedido.detalles.map((detalle, index) => {
                   const productoInfo = getProducto(detalle.idProducto);
                   return (
-                    <tr key={detalle.id} className="border-b">
+                    <tr key={detalle.id} className="border-b border-gray-400">
                         <td className="p-2">{index + 1}</td>
                         <td className="p-2">
                             {productoInfo?.idProducto} - {productoInfo?.Producto || `ID: ${detalle.idProducto}`}
@@ -178,7 +178,7 @@ export default function ImprimirPedidoPage() {
                     <span>Items:</span>
                     <span>{pedido.detalles.length}</span>
                 </div>
-                <div className="flex justify-between text-lg font-bold border-t pt-2">
+                <div className="flex justify-between text-lg font-bold border-t border-gray-400 pt-2">
                     <span>TOTAL:</span>
                     <span>{new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(pedido.totalPedido)}</span>
                 </div>
