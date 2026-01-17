@@ -45,7 +45,7 @@ export default function ImprimirPedidoPage() {
 
     const pedidoPayload: PedidoCreatePayload = {
       idPedido: pedido.idPedido,
-      fechaPedido: new Date().toISOString(),
+      fechaPedido: pedido.fechaPedido,
       totalPedido: pedido.totalPedido,
       idAsesor: pedido.idAsesor,
       Status: "Enviado",

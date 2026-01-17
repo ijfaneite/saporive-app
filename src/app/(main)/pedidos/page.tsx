@@ -105,7 +105,7 @@ export default function PedidosPage() {
 
     const pedidoPayload: PedidoCreatePayload = {
       idPedido: pedidoToUpdate.idPedido,
-      fechaPedido: new Date().toISOString(),
+      fechaPedido: pedidoToUpdate.fechaPedido,
       totalPedido: pedidoToUpdate.totalPedido,
       idAsesor: pedidoToUpdate.idAsesor,
       Status: "Enviado",
