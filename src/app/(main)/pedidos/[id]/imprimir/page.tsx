@@ -1,10 +1,10 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import Image from 'next/image';
 import { useParams } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
-import { Pedido, Producto, Cliente } from '@/lib/types';
+import { Pedido, Producto, Cliente, PedidoCreatePayload, DetallePedidoBase } from '@/lib/types';
 import { API_BASE_URL, API_ROUTES } from '@/lib/config';
 import { Loader2 } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
@@ -22,6 +22,70 @@ export default function ImprimirPedidoPage() {
   const [isLoading, setIsLoading] = useState(true);
 
   const orderId = params.id as string;
+
+  const updateStatusToImpreso = useCallback(async () => {
+    if (!token || !pedido || !asesor || !selectedEmpresa) {
+        toast({
+            variant: "destructive",
+            title: "Error de Sincronización",
+            description: "No se pudo actualizar el estado del pedido a 'Impreso'.",
+        });
+        return;
+    }
+
+    const detallesParaEnviar: DetallePedidoBase[] = pedido.detalles.map(linea => ({
+        idProducto: linea.idProducto,
+        Precio: linea.Precio,
+        Cantidad: linea.Cantidad,
+    }));
+
+    const pedidoPayload: PedidoCreatePayload = {
+      idPedido: pedido.idPedido,
+      fechaPedido: pedido.fechaPedido,
+      totalPedido: pedido.totalPedido,
+      idAsesor: pedido.idAsesor,
+      Status: "Impreso",
+      idCliente: pedido.idCliente,
+      idEmpresa: pedido.idEmpresa,
+      detalles: detallesParaEnviar,
+    };
+
+    try {
+      const response = await fetch(`${API_BASE_URL}${API_ROUTES.pedidos}${pedido.idPedido}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(pedidoPayload),
+      });
+
+      if (response.status === 401) {
+        toast({ variant: 'destructive', title: 'Sesión expirada', description: 'Inicie sesión de nuevo.' });
+        logout();
+        return;
+      }
+
+      if (response.ok) {
+         toast({
+            title: 'Estado Actualizado',
+            description: 'El pedido se ha marcado como "Impreso".'
+        });
+      } else {
+        toast({
+            variant: 'destructive',
+            title: 'Error al actualizar',
+            description: 'No se pudo cambiar el estado del pedido a "Impreso".'
+        });
+      }
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Error de Conexión",
+        description: "No se pudo comunicar con el servidor para actualizar el estado.",
+      });
+    }
+}, [pedido, token, asesor, selectedEmpresa, toast, logout]);
 
   useEffect(() => {
     if (isAuthLoading || !orderId || !token) return;
@@ -60,13 +124,15 @@ export default function ImprimirPedidoPage() {
 
   useEffect(() => {
     if (!isLoading && pedido) {
-      // Small timeout to ensure all content is rendered before printing
       const timer = setTimeout(() => {
         window.print();
+        if (pedido.Status !== 'Impreso') {
+          updateStatusToImpreso();
+        }
       }, 500);
       return () => clearTimeout(timer);
     }
-  }, [isLoading, pedido]);
+  }, [isLoading, pedido, updateStatusToImpreso]);
 
   useEffect(() => {
     const handleAfterPrint = () => {
@@ -103,9 +169,7 @@ export default function ImprimirPedidoPage() {
   
   return (
     <div className="bg-white text-black p-8 font-sans text-sm">
-        {/* Header section */}
         <div className="flex justify-between items-start mb-4 border-b border-gray-400 pb-4">
-            {/* Left side: Logo and Company Name */}
             <div>
                 {logo && (
                     <Image
@@ -119,14 +183,12 @@ export default function ImprimirPedidoPage() {
                 <h1 className="text-xl font-bold mt-2">{selectedEmpresa?.RazonSocial || 'Sapori.ve'}</h1>
             </div>
 
-            {/* Right side: Order Number and Date */}
             <div className="text-right">
                 <p className="text-lg font-bold text-black">Pedido Nro.: {pedido.idPedido}</p>
                 <p className="mt-2">{format(new Date(pedido.fechaPedido), "dd/MMM/yyyy", { locale: es })}</p>
             </div>
         </div>
 
-        {/* Client and Asesor section */}
         <div className="mb-6 space-y-2">
             <div>
                 <span className="font-bold">Cliente: </span>
@@ -142,7 +204,6 @@ export default function ImprimirPedidoPage() {
             </div>
         </div>
 
-        {/* Details Table */}
         <table className="w-full text-left table-auto">
             <thead className="border-b border-gray-400 bg-gray-100">
                 <tr>
@@ -171,7 +232,6 @@ export default function ImprimirPedidoPage() {
             </tbody>
         </table>
         
-        {/* Footer section */}
         <div className="flex justify-end mt-6">
             <div className="w-1/3 space-y-2">
                 <div className="flex justify-between">

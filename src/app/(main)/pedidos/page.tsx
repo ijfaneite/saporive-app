@@ -91,6 +91,13 @@ export default function PedidosPage() {
     return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value);
   }
 
+  const getStatusVariant = (status: string): 'destructive' | 'info' | 'secondary' => {
+    const s = status.toLowerCase();
+    if (s === 'pendiente') return 'destructive';
+    if (s === 'impreso') return 'info';
+    return 'secondary';
+  }
+
   return (
     <div className="p-4 space-y-6 flex flex-col h-full">
       <div className="flex justify-between items-center flex-shrink-0">
@@ -151,7 +158,7 @@ export default function PedidosPage() {
                                           {format(new Date(pedido.fechaPedido), "dd/MMM/yyyy", { locale: es })}
                                       </p>
                                       <Badge 
-                                        variant={pedido.Status.toLowerCase() === 'pendiente' ? 'destructive' : 'secondary'}
+                                        variant={getStatusVariant(pedido.Status)}
                                         className="mt-1"
                                       >
                                         {pedido.Status}
