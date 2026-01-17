@@ -170,7 +170,7 @@ export function PedidoForm({ mode, initialPedido, idPedidoGenerado, onSave, isSa
       }, [selectedClientId, clients]);
 
     return (
-        <div className="space-y-2 -mx-2">
+        <div className="space-y-4">
             <Card>
                 <CardContent className='p-2 text-sm'>
                     <div className="flex justify-between items-center">
