@@ -37,6 +37,7 @@ export function PedidoShareImage({ pedido }: PedidoShareImageProps) {
                         width={120}
                         height={120}
                         data-ai-hint={logo.imageHint}
+                        unoptimized
                     />
                 )}
                 <h1 className="text-xl font-bold mt-2">{selectedEmpresa?.RazonSocial || 'Sapori.ve'}</h1>

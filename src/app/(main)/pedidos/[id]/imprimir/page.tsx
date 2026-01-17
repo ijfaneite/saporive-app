@@ -188,6 +188,7 @@ export default function ImprimirPedidoPage() {
                         width={120}
                         height={120}
                         data-ai-hint={logo.imageHint}
+                        unoptimized
                     />
                 )}
                 <h1 className="text-xl font-bold mt-2">{selectedEmpresa?.RazonSocial || 'Sapori.ve'}</h1>
