@@ -1,18 +1,22 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from 'react';
+import Image from 'next/image';
 import { useParams } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
-import { Pedido, Producto } from '@/lib/types';
+import { Pedido, Producto, Cliente } from '@/lib/types';
 import { API_BASE_URL, API_ROUTES } from '@/lib/config';
 import { Loader2 } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { format } from 'date-fns';
+import { es } from 'date-fns/locale';
+import { PlaceHolderImages } from '@/lib/placeholder-images';
 
 export default function ImprimirPedidoPage() {
   const { token, asesor, clients, products, selectedEmpresa, isLoading: isAuthLoading, logout } = useAuth();
   const params = useParams();
   const { toast } = useToast();
+  const logo = PlaceHolderImages.find(img => img.id === 'logo');
 
   const [pedido, setPedido] = useState<Pedido | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -98,67 +102,90 @@ export default function ImprimirPedidoPage() {
   }
   
   return (
-    <div className="bg-white text-black font-mono p-1 text-xs" style={{ width: '280px', margin: '0 auto' }}>
-        <div className="text-center mb-2">
-            <h1 className="text-sm font-bold">{selectedEmpresa?.RazonSocial || 'Sapori.ve'}</h1>
-        </div>
-
-        <p>------------------------------------</p>
-        <div>
-            <div className="flex justify-between">
-                <span>PEDIDO: {pedido.idPedido}</span>
-                <span>{format(new Date(pedido.fechaPedido), 'dd/MM/yy')}</span>
+    <div className="bg-white text-black p-8 font-sans text-sm">
+        {/* Header section */}
+        <div className="flex justify-between items-start mb-4 border-b pb-4">
+            {/* Left side: Logo and Company Name */}
+            <div>
+                {logo && (
+                    <Image
+                        src={logo.imageUrl}
+                        alt={logo.description}
+                        width={120}
+                        height={120}
+                        data-ai-hint={logo.imageHint}
+                    />
+                )}
+                <h1 className="text-xl font-bold mt-2">{selectedEmpresa?.RazonSocial || 'Sapori.ve'}</h1>
             </div>
-            <p>VENDEDOR: {asesor?.Asesor}</p>
-        </div>
-        <p>------------------------------------</p>
-        <div>
-            <p>CLIENTE: {cliente?.Cliente}</p>
-            <p>RIF: {pedido.Rif || cliente?.Rif}</p>
-        </div>
-        <p>------------------------------------</p>
 
-        <table className="w-full">
-            <thead>
+            {/* Right side: Date and Order Number */}
+            <div className="text-right">
+                <p>{format(new Date(pedido.fechaPedido), "dd/MMM/yyyy", { locale: es })}</p>
+                <p className="text-lg font-bold mt-2">Pedido Nro.: {pedido.idPedido}</p>
+            </div>
+        </div>
+
+        {/* Client and Asesor section */}
+        <div className="mb-6 space-y-2">
+            <div>
+                <span className="font-bold">Cliente: </span>
+                <span>{cliente?.idCliente} - {cliente?.Cliente}</span>
+            </div>
+            <div>
+                <span className="font-bold">Rif: </span>
+                <span>{pedido.Rif || cliente?.Rif}</span>
+            </div>
+            <div>
+                <span className="font-bold">Asesor: </span>
+                <span>{asesor?.idAsesor} - {asesor?.Asesor}</span>
+            </div>
+        </div>
+
+        {/* Details Table */}
+        <table className="w-full text-left table-auto">
+            <thead className="border-b bg-gray-100">
                 <tr>
-                    <th className="text-left font-normal">DESC.</th>
-                    <th className="text-right font-normal px-1">CANT</th>
-                    <th className="text-right font-normal">PRECIO</th>
-                    <th className="text-right font-normal">TOTAL</th>
+                    <th className="p-2">Item</th>
+                    <th className="p-2 w-2/5">Producto</th>
+                    <th className="p-2 text-right">Cantidad</th>
+                    <th className="p-2 text-right">Precio</th>
+                    <th className="p-2 text-right">Total</th>
                 </tr>
             </thead>
             <tbody>
-              {pedido.detalles.map((detalle) => (
-                  <React.Fragment key={detalle.id}>
-                    <tr>
-                      <td colSpan={4} className="text-left pt-1 uppercase">
-                        {getProducto(detalle.idProducto)?.Producto ||
-                          `ID: ${detalle.idProducto}`}
-                      </td>
+              {pedido.detalles.map((detalle, index) => {
+                  const productoInfo = getProducto(detalle.idProducto);
+                  return (
+                    <tr key={detalle.id} className="border-b">
+                        <td className="p-2">{index + 1}</td>
+                        <td className="p-2">
+                            {productoInfo?.idProducto} - {productoInfo?.Producto || `ID: ${detalle.idProducto}`}
+                        </td>
+                        <td className="p-2 text-right">{detalle.Cantidad}</td>
+                        <td className="p-2 text-right">{formatCurrency(detalle.Precio)}</td>
+                        <td className="p-2 text-right">{formatCurrency(detalle.Total)}</td>
                     </tr>
-                    <tr>
-                      <td colSpan={1}></td>
-                      <td className="text-right px-1">{detalle.Cantidad}</td>
-                      <td className="text-right">
-                        {formatCurrency(detalle.Precio)}
-                      </td>
-                      <td className="text-right">
-                        {formatCurrency(detalle.Total)}
-                      </td>
-                    </tr>
-                  </React.Fragment>
-                ))}
+                  )
+                })}
             </tbody>
         </table>
         
-        <p>------------------------------------</p>
-
-        <div className="text-right">
-            <p>ITEMS: {pedido.detalles.length}</p>
-            <p className="text-sm font-bold">TOTAL: {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(pedido.totalPedido)}</p>
+        {/* Footer section */}
+        <div className="flex justify-end mt-6">
+            <div className="w-1/3 space-y-2">
+                <div className="flex justify-between">
+                    <span>Items:</span>
+                    <span>{pedido.detalles.length}</span>
+                </div>
+                <div className="flex justify-between text-lg font-bold border-t pt-2">
+                    <span>TOTAL:</span>
+                    <span>{new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(pedido.totalPedido)}</span>
+                </div>
+            </div>
         </div>
         
-        <div className="text-center mt-4">
+        <div className="text-center mt-8 text-gray-500">
             <p>Gracias por su compra!</p>
         </div>
     </div>
