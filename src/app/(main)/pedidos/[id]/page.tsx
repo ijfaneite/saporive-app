@@ -168,7 +168,6 @@ export default function EditarPedidoPage() {
   }
 
   const handleUpdatePedido = async () => {
-    // --- VALIDACIONES ---
     if (!token) {
         toast({
             variant: "destructive",
@@ -193,7 +192,6 @@ export default function EditarPedidoPage() {
 
     setIsSaving(true);
     
-    // --- CONSTRUCCIÓN DEL PAYLOAD ---
     const detallesParaEnviar: DetallePedidoBase[] = lineasPedido.map(linea => ({
         idProducto: linea.producto.idProducto,
         Precio: linea.producto.Precio,
@@ -202,16 +200,15 @@ export default function EditarPedidoPage() {
 
     const pedidoPayload: PedidoCreatePayload = {
       idPedido: pedido.idPedido,
-      fechaPedido: new Date().toISOString(), // Usar fecha actual para la actualización
+      fechaPedido: new Date().toISOString(),
       totalPedido: totalPedido,
       idAsesor: asesor.idAsesor,
-      Status: pedido.Status, // Se mantiene el status actual del pedido
+      Status: pedido.Status,
       idCliente: selectedClientId,
       idEmpresa: selectedEmpresa.idEmpresa,
       detalles: detallesParaEnviar,
     };
 
-    // --- LLAMADA A LA API ---
     try {
       const response = await fetch(`${API_BASE_URL}${API_ROUTES.pedidos}${orderId}`, {
         method: 'PUT',
@@ -386,9 +383,9 @@ export default function EditarPedidoPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Producto</TableHead>
-                  <TableHead className="w-24 text-center">Cantidad</TableHead>
-                  <TableHead className="text-right">Subtotal</TableHead>
+                  <TableHead className="font-bold text-primary">Producto</TableHead>
+                  <TableHead className="w-24 text-center font-bold text-primary">Cantidad</TableHead>
+                  <TableHead className="text-right font-bold text-primary">Subtotal</TableHead>
                   <TableHead className="w-12"></TableHead>
                 </TableRow>
               </TableHeader>

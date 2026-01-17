@@ -121,7 +121,6 @@ export default function NuevoPedidoPage() {
   }
 
   const handleSavePedido = async () => {
-    // --- VALIDACIONES ---
     if (!token) {
         toast({
             variant: "destructive",
@@ -146,7 +145,6 @@ export default function NuevoPedidoPage() {
 
     setIsSaving(true);
     
-    // --- CONSTRUCCIÓN DEL PAYLOAD ---
     const detallesParaEnviar: DetallePedidoBase[] = lineasPedido.map(linea => ({
         idProducto: linea.producto.idProducto,
         Precio: linea.producto.Precio,
@@ -158,13 +156,12 @@ export default function NuevoPedidoPage() {
       fechaPedido: new Date().toISOString(),
       totalPedido: totalPedido,
       idAsesor: asesor.idAsesor,
-      Status: "Pendiente", // STATUS AÑADIDO
+      Status: "Pendiente",
       idCliente: selectedClientId,
       idEmpresa: selectedEmpresa.idEmpresa,
       detalles: detallesParaEnviar,
     };
 
-    // --- LLAMADA A LA API ---
     try {
       const response = await fetch(`${API_BASE_URL}${API_ROUTES.pedidos}`, {
         method: 'POST',
@@ -187,13 +184,11 @@ export default function NuevoPedidoPage() {
         throw new Error(errorData.detail || 'No se pudo guardar el pedido.');
       }
       
-      // --- LÓGICA POST-GUARDADO EXITOSO ---
       toast({
         title: "Pedido Guardado",
         description: "El nuevo pedido se ha creado exitosamente.",
       });
 
-      // Increment counter on success (fire-and-forget, with error handling)
       if (selectedEmpresa) {
          fetch(`${API_BASE_URL}${API_ROUTES.updateEmpresaPedido}${selectedEmpresa.idEmpresa}`, {
                 method: 'PUT',
@@ -360,9 +355,9 @@ export default function NuevoPedidoPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Producto</TableHead>
-                  <TableHead className="w-24 text-center">Cantidad</TableHead>
-                  <TableHead className="text-right">Subtotal</TableHead>
+                  <TableHead className="font-bold text-primary">Producto</TableHead>
+                  <TableHead className="w-24 text-center font-bold text-primary">Cantidad</TableHead>
+                  <TableHead className="text-right font-bold text-primary">Subtotal</TableHead>
                   <TableHead className="w-12"></TableHead>
                 </TableRow>
               </TableHeader>
