@@ -8,13 +8,16 @@ import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { PlusCircle, Loader2, RefreshCw, Pencil, Printer } from "lucide-react";
+import { PlusCircle, Loader2, RefreshCw, Pencil, Printer, Eye } from "lucide-react";
 import Link from 'next/link';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { PedidoForm } from '@/components/PedidoForm';
+
 
 export default function PedidosPage() {
   const { token, asesor, clients, logout } = useAuth();
@@ -22,6 +25,7 @@ export default function PedidosPage() {
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState('');
+  const [viewingPedido, setViewingPedido] = useState<Pedido | null>(null);
 
   const fetchPedidos = useCallback(async () => {
     if (!token || !asesor) {
@@ -61,19 +65,14 @@ export default function PedidosPage() {
   }, [token, asesor, toast, logout]);
   
   useEffect(() => {
-    // Fetch on mount
     fetchPedidos();
 
-    // Set up an event listener to refetch when the window gains focus.
-    // This is useful for when the user prints a pedido (which opens a new tab)
-    // and then comes back to this tab.
     const handleFocus = () => {
       fetchPedidos();
     };
 
     window.addEventListener('focus', handleFocus);
 
-    // Clean up the event listener when the component unmounts
     return () => {
       window.removeEventListener('focus', handleFocus);
     };
@@ -183,6 +182,9 @@ export default function PedidosPage() {
                                 <div className="flex justify-between items-end mt-2">
                                     <p className="text-xl font-bold text-primary">{formatCurrency(pedido.totalPedido)}</p>
                                     <div className="flex items-center gap-2">
+                                        <Button variant="outline" size="icon" aria-label="Consultar Pedido" onClick={() => setViewingPedido(pedido)}>
+                                            <Eye className="h-4 w-4 text-primary" />
+                                        </Button>
                                         <Link href={`/pedidos/${pedido.idPedido}/imprimir`} passHref legacyBehavior>
                                             <a target="_blank" rel="noopener noreferrer">
                                                 <Button variant="outline" size="icon" aria-label="Imprimir Pedido">
@@ -204,6 +206,28 @@ export default function PedidosPage() {
             </div>
         </ScrollArea>
       )}
+
+      <Sheet open={!!viewingPedido} onOpenChange={(isOpen) => !isOpen && setViewingPedido(null)}>
+        <SheetContent className="w-full sm:max-w-xl overflow-y-auto">
+            <SheetHeader>
+                <SheetTitle>Consultar Pedido</SheetTitle>
+                <SheetDescription>
+                    Visualizando los detalles del pedido <span className='font-bold text-foreground'>{viewingPedido?.idPedido}</span>.
+                </SheetDescription>
+            </SheetHeader>
+            <div className='mt-4'>
+              {viewingPedido && (
+                  <PedidoForm
+                      mode="consultar"
+                      initialPedido={viewingPedido}
+                      isSaving={false}
+                      onSave={async () => {}}
+                  />
+              )}
+            </div>
+        </SheetContent>
+      </Sheet>
+
     </div>
   );
 }
