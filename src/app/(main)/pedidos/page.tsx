@@ -19,6 +19,7 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '
 import { PedidoForm } from '@/components/PedidoForm';
 import html2canvas from 'html2canvas';
 import { PedidoShareImage } from '@/components/PedidoShareImage';
+import { getStatusVariant } from '@/lib/status-config';
 
 
 export default function PedidosPage() {
@@ -93,7 +94,8 @@ export default function PedidosPage() {
         return;
     }
     
-    if (pedidoToUpdate.Status.toLowerCase() === 'enviado') {
+    const currentStatus = pedidoToUpdate.Status.toLowerCase();
+    if (currentStatus === 'enviado') {
         return; // Already sent, no need to update
     }
 
@@ -235,15 +237,6 @@ export default function PedidosPage() {
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value);
-  }
-
-  const getStatusVariant = (status: string): 'destructive' | 'success' | 'secondary' | 'warning' | 'info' => {
-    const s = status.toLowerCase();
-    if (s === 'pendiente') return 'destructive';
-    if (s === 'enviado') return 'success';
-    if (s === 'modificado') return 'warning';
-    if (s === 'impreso') return 'info';
-    return 'secondary';
   }
 
   return (
