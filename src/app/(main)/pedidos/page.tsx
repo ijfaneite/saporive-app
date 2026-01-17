@@ -186,13 +186,13 @@ export default function PedidosPage() {
                                         <Link href={`/pedidos/${pedido.idPedido}/imprimir`} passHref legacyBehavior>
                                             <a target="_blank" rel="noopener noreferrer">
                                                 <Button variant="outline" size="icon" aria-label="Imprimir Pedido">
-                                                    <Printer className="h-4 w-4" />
+                                                    <Printer className="h-4 w-4 text-primary" />
                                                 </Button>
                                             </a>
                                         </Link>
                                         <Link href={`/pedidos/${pedido.idPedido}`} passHref>
                                             <Button variant="outline" size="icon" aria-label="Editar Pedido">
-                                                <Pencil className="h-4 w-4" />
+                                                <Pencil className="h-4 w-4 text-primary" />
                                             </Button>
                                         </Link>
                                     </div>
