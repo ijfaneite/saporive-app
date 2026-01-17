@@ -302,8 +302,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     // This makes the login feel instantaneous.
     syncData(access_token);
 
+    // Restore persisted state from localStorage to avoid race conditions with layouts
+    // that depend on this state being present immediately after login.
+    const storedAsesor = localStorage.getItem('asesor');
+    if (storedAsesor) {
+        setAsesorState(JSON.parse(storedAsesor));
+    }
+
     const storedEmpresa = localStorage.getItem('empresa');
     if (storedEmpresa) {
+      const parsedEmpresa = JSON.parse(storedEmpresa) as Empresa;
+      setSelectedEmpresaState(parsedEmpresa);
       router.push('/pedidos');
     } else {
       router.push('/configuracion');
