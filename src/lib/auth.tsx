@@ -79,19 +79,27 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setUser(null);
     setToken(null);
     setAsesorState(null);
+    setSelectedEmpresaState(null);
+    
+    // Clear data that is session-specific or fetched on login
     setAsesores([]);
     setClients([]);
     setProducts([]);
     setEmpresas([]);
-    setSelectedEmpresaState(null);
+
     eraseCookie('auth_token');
     localStorage.removeItem('user');
-    localStorage.removeItem('asesor');
+    
+    // Do NOT remove 'asesor' and 'empresa' to persist them across sessions
+    // localStorage.removeItem('asesor');
+    // localStorage.removeItem('empresa');
+
+    // This data is re-fetched on login, so it's safe to remove
     localStorage.removeItem('asesores');
     localStorage.removeItem('clients');
     localStorage.removeItem('products');
     localStorage.removeItem('empresas');
-    localStorage.removeItem('empresa');
+
     router.push('/login');
   }, [router]);
 
