@@ -172,14 +172,16 @@ export function PedidoForm({ mode, initialPedido, idPedidoGenerado, onSave, isSa
     return (
         <div className="space-y-2 -mx-2">
             <Card>
-                <CardContent className='p-2 space-y-2 text-sm'>
-                    <div className="flex items-center gap-2">
-                        <Package className="h-5 w-5 text-muted-foreground" />
-                        <span className="font-bold text-lg text-primary">{mode === 'nuevo' ? idPedidoGenerado : initialPedido?.idPedido}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <User className="h-5 w-5 text-muted-foreground" />
-                        <span>{asesor?.Asesor || 'No seleccionado'}</span>
+                <CardContent className='p-2 text-sm'>
+                    <div className="flex justify-between items-center">
+                        <div className="flex items-center gap-2">
+                            <Package className="h-5 w-5 text-muted-foreground" />
+                            <span className="font-bold text-lg text-primary">{mode === 'nuevo' ? idPedidoGenerado : initialPedido?.idPedido}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <User className="h-5 w-5 text-muted-foreground" />
+                            <span className="truncate">{asesor?.Asesor || 'No seleccionado'}</span>
+                        </div>
                     </div>
                 </CardContent>
             </Card>
