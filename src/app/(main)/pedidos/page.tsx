@@ -1,14 +1,14 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useAuth } from '@/lib/auth';
-import { Pedido } from '@/lib/types';
+import { Pedido, PedidoCreatePayload, DetallePedidoBase } from '@/lib/types';
 import { API_BASE_URL, API_ROUTES } from '@/lib/config';
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { PlusCircle, Loader2, RefreshCw, Pencil, Printer, Eye } from "lucide-react";
+import { PlusCircle, Loader2, RefreshCw, Pencil, Printer, Eye, Share2 } from "lucide-react";
 import Link from 'next/link';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -17,15 +17,20 @@ import { cn } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { PedidoForm } from '@/components/PedidoForm';
+import html2canvas from 'html2canvas';
+import { PedidoShareImage } from '@/components/PedidoShareImage';
 
 
 export default function PedidosPage() {
-  const { token, asesor, clients, logout } = useAuth();
+  const { token, asesor, clients, logout, products } = useAuth();
   const [pedidos, setPedidos] = useState<Pedido[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState('');
   const [viewingPedido, setViewingPedido] = useState<Pedido | null>(null);
+  const [sharingPedido, setSharingPedido] = useState<Pedido | null>(null);
+  const [isSharing, setIsSharing] = useState(false);
+  const shareComponentRef = useRef<HTMLDivElement>(null);
 
   const fetchPedidos = useCallback(async () => {
     if (!token || !asesor) {
@@ -77,6 +82,129 @@ export default function PedidosPage() {
       window.removeEventListener('focus', handleFocus);
     };
   }, [fetchPedidos]);
+
+  const updateStatusToImpreso = useCallback(async (pedidoToUpdate: Pedido): Promise<void> => {
+    if (!token || !asesor) {
+        toast({
+            variant: "destructive",
+            title: "Error de Sincronización",
+            description: "No se pudo actualizar el estado del pedido.",
+        });
+        return;
+    }
+
+    const detallesParaEnviar: DetallePedidoBase[] = pedidoToUpdate.detalles.map(linea => ({
+        idProducto: linea.idProducto,
+        Precio: linea.Precio,
+        Cantidad: linea.Cantidad,
+    }));
+
+    const pedidoPayload: PedidoCreatePayload = {
+      idPedido: pedidoToUpdate.idPedido,
+      fechaPedido: new Date().toISOString(),
+      totalPedido: pedidoToUpdate.totalPedido,
+      idAsesor: pedidoToUpdate.idAsesor,
+      Status: "Impreso",
+      idCliente: pedidoToUpdate.idCliente,
+      idEmpresa: pedidoToUpdate.idEmpresa,
+      detalles: detallesParaEnviar,
+    };
+
+    try {
+      const response = await fetch(`${API_BASE_URL}${API_ROUTES.pedidos}${pedidoToUpdate.idPedido}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(pedidoPayload),
+      });
+
+      if (response.status === 401) {
+        toast({ variant: 'destructive', title: 'Sesión expirada', description: 'Inicie sesión de nuevo.' });
+        logout();
+        return;
+      }
+
+      if (response.ok) {
+        toast({
+           title: 'Estado Actualizado',
+           description: 'El pedido se ha marcado como "Impreso".'
+       });
+       fetchPedidos();
+      } else {
+        const errorData = await response.json().catch(() => ({ detail: 'No se pudo cambiar el estado.' }));
+        toast({
+            variant: 'destructive',
+            title: 'Error al actualizar',
+            description: errorData.detail,
+        });
+      }
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Error de Conexión",
+        description: "No se pudo comunicar con el servidor.",
+      });
+    }
+  }, [token, asesor, toast, logout, fetchPedidos]);
+
+  useEffect(() => {
+    if (sharingPedido && shareComponentRef.current) {
+      setIsSharing(true);
+      
+      setTimeout(() => {
+        if (!shareComponentRef.current) return;
+
+        html2canvas(shareComponentRef.current, { useCORS: true, scale: 2 })
+          .then(canvas => {
+            canvas.toBlob(async (blob) => {
+              if (!blob) {
+                toast({ variant: 'destructive', title: 'Error al generar imagen' });
+                return;
+              }
+
+              const fileName = `Pedido-${sharingPedido.idPedido}.png`;
+              const file = new File([blob], fileName, { type: 'image/png' });
+              
+              if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+                try {
+                  await navigator.share({
+                    files: [file],
+                    title: `Pedido ${sharingPedido.idPedido}`,
+                    text: `Adjunto el pedido ${sharingPedido.idPedido}.`,
+                  });
+                  await updateStatusToImpreso(sharingPedido);
+                } catch (error) {
+                  console.info("Share cancelled by user", error);
+                }
+              } else {
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = fileName;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(link.href);
+                toast({
+                  title: 'Imagen descargada',
+                  description: 'La imagen del pedido se ha guardado en tu dispositivo.',
+                });
+                await updateStatusToImpreso(sharingPedido);
+              }
+            });
+          })
+          .catch(err => {
+            console.error("Error generating image:", err);
+            toast({ variant: 'destructive', title: 'Error al generar imagen' });
+          })
+          .finally(() => {
+             setIsSharing(false);
+             setSharingPedido(null);
+          });
+      }, 500);
+    }
+  }, [sharingPedido, updateStatusToImpreso, toast]);
 
   const getCliente = useCallback((idCliente: string) => {
     return clients.find(c => c.idCliente === idCliente);
@@ -134,6 +262,7 @@ export default function PedidosPage() {
         placeholder="Buscar por cliente, RIF, ID, status..."
         value={searchTerm}
         onChange={(e) => setSearchTerm(e.target.value)}
+        className="flex-shrink-0"
       />
 
       {isLoading ? (
@@ -151,8 +280,8 @@ export default function PedidosPage() {
           </Link>
         </div>
       ) : (
-        <ScrollArea className="flex-grow pr-4">
-            <div className="space-y-4">
+        <ScrollArea className="flex-grow pr-4 -mr-4">
+            <div className="space-y-4 pr-4">
                 {filteredPedidos.map(pedido => {
                     const cliente = getCliente(pedido.idCliente);
                     return (
@@ -185,6 +314,9 @@ export default function PedidosPage() {
                                     <div className="flex items-center gap-2">
                                         <Button variant="outline" size="icon" aria-label="Consultar Pedido" onClick={() => setViewingPedido(pedido)}>
                                             <Eye className="h-4 w-4 text-primary" />
+                                        </Button>
+                                        <Button variant="outline" size="icon" aria-label="Compartir Pedido" onClick={() => setSharingPedido(pedido)} disabled={isSharing}>
+                                            {isSharing && sharingPedido?.idPedido === pedido.idPedido ? <Loader2 className="h-4 w-4 animate-spin" /> : <Share2 className="h-4 w-4 text-primary" />}
                                         </Button>
                                         <Link href={`/pedidos/${pedido.idPedido}/imprimir`} passHref legacyBehavior>
                                             <a target="_blank" rel="noopener noreferrer">
@@ -228,6 +360,14 @@ export default function PedidosPage() {
             </div>
         </SheetContent>
       </Sheet>
+
+      {sharingPedido && (
+        <div style={{ position: 'fixed', left: '-9999px', top: 0, zIndex: -1 }}>
+          <div ref={shareComponentRef}>
+            <PedidoShareImage pedido={sharingPedido} />
+          </div>
+        </div>
+      )}
 
     </div>
   );
