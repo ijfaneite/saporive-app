@@ -299,7 +299,7 @@ export default function PedidosPage() {
                                             {format(new Date(pedido.updatedAt), "h:mm a", { locale: es })}
                                         </p>
                                     </div>
-                                    <div className="min-w-0">
+                                    <div className="min-w-0 text-right">
                                         <p className="font-bold text-foreground truncate" title={pedido.idPedido}>
                                             {pedido.idPedido}
                                         </p>
