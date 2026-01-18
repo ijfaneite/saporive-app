@@ -193,16 +193,16 @@ export function PedidoForm({ mode, initialPedido, idPedidoGenerado, onSave, isSa
                 <CardContent className='p-3 text-sm'>
                     <div className="flex justify-between items-start gap-4">
                         {/* Left side */}
-                        <div className="space-y-1">
-                            <p className="font-bold text-lg text-primary">{mode === 'nuevo' ? idPedidoGenerado : initialPedido?.idPedido}</p>
-                            <p className="truncate text-sm font-medium">{selectedClient ? selectedClient.Cliente : 'Sin cliente'}</p>
+                        <div className="space-y-1 min-w-0">
+                            <p className="font-bold text-lg text-primary truncate">{mode === 'nuevo' ? idPedidoGenerado : initialPedido?.idPedido}</p>
+                            <p className="text-sm font-medium truncate">{selectedClient ? selectedClient.Cliente : 'Sin cliente'}</p>
                             {selectedClient && (
-                                <p className="truncate text-xs text-muted-foreground">{selectedClient.Rif}</p>
+                                <p className="text-xs text-muted-foreground truncate">{selectedClient.Rif}</p>
                             )}
                         </div>
 
                         {/* Right side */}
-                        <div className="flex flex-col items-end gap-1">
+                        <div className="flex flex-col items-end gap-1 text-right">
                             <Badge variant={getStatusVariant(statusDelPedido)}>{statusDelPedido}</Badge>
                             <span className="text-xs">{format(fechaDelPedido, "dd/MMM/yyyy", { locale: es })}</span>
                             <span className="text-xs text-muted-foreground">{format(horaUltimaActualizacion, "h:mm a", { locale: es })}</span>
