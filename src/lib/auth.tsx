@@ -81,7 +81,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setAsesorState(null);
     setSelectedEmpresaState(null);
     
-    // Clear data that is session-specific or fetched on login
     setAsesores([]);
     setClients([]);
     setProducts([]);
@@ -89,12 +88,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     eraseCookie('auth_token');
     localStorage.removeItem('user');
-    
-    // Do NOT remove 'asesor' and 'empresa' to persist them across sessions
-    // localStorage.removeItem('asesor');
-    // localStorage.removeItem('empresa');
-
-    // This data is re-fetched on login, so it's safe to remove
+    localStorage.removeItem('asesor');
+    localStorage.removeItem('empresa');
     localStorage.removeItem('asesores');
     localStorage.removeItem('clients');
     localStorage.removeItem('products');
@@ -102,6 +97,51 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     router.push('/login');
   }, [router]);
+
+  const fetchClientsForAsesor = useCallback(async (asesorId: string, tokenOverride?: string) => {
+    const currentToken = tokenOverride || token;
+    if (!currentToken) return;
+
+    setIsSyncing(true); // Use the general syncing flag
+    try {
+        const url = new URL(`${API_BASE_URL}${API_ROUTES.clientes}`);
+        url.searchParams.append('id_asesor', asesorId);
+
+        const response = await fetch(url.toString(), {
+            headers: { Authorization: `Bearer ${currentToken}` }
+        });
+
+        if (response.status === 401) {
+            toast({ variant: "destructive", title: "Sesión expirada", description: "Su sesión ha expirado. Por favor, inicie sesión de nuevo." });
+            logout();
+            return;
+        }
+        if (!response.ok) throw new Error('No se pudieron cargar los clientes para el asesor.');
+
+        const clientesData: Cliente[] = await response.json();
+        setClients(clientesData);
+        localStorage.setItem('clients', JSON.stringify(clientesData));
+
+    } catch (error) {
+        toast({
+            variant: "destructive",
+            title: "Error al Cargar Clientes",
+            description: error instanceof Error ? error.message : "No se pudieron cargar los clientes.",
+        });
+        setClients([]);
+        localStorage.removeItem('clients');
+    } finally {
+        setIsSyncing(false);
+    }
+  }, [token, toast, logout]);
+
+
+  const setAsesor = (asesor: Asesor) => {
+    setAsesorState(asesor);
+    localStorage.setItem('asesor', JSON.stringify(asesor));
+    // When an advisor is set, fetch their specific clients.
+    fetchClientsForAsesor(asesor.idAsesor);
+  };
 
   useEffect(() => {
     try {
@@ -119,12 +159,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             if (storedAsesor) {
                 const parsedAsesor = JSON.parse(storedAsesor) as Asesor;
                 const found = parsedAsesores.find(a => a.idAsesor === parsedAsesor.idAsesor);
-                if (found) setAsesorState(found);
+                if (found) {
+                    setAsesorState(found);
+                    // If we have a stored advisor, we should have their clients stored too.
+                    const storedClients = localStorage.getItem('clients');
+                    if (storedClients) {
+                        setClients(JSON.parse(storedClients));
+                    }
+                }
             }
         }
-        
-        const storedClients = localStorage.getItem('clients');
-        if (storedClients) setClients(JSON.parse(storedClients));
         
         const storedProducts = localStorage.getItem('products');
         if (storedProducts) setProducts(JSON.parse(storedProducts));
@@ -165,7 +209,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setIsSyncing(true);
     try {
         const responses = await Promise.all([
-            fetch(`${API_BASE_URL}${API_ROUTES.clientes}`, { headers: { Authorization: `Bearer ${currentToken}` } }),
             fetch(`${API_BASE_URL}${API_ROUTES.productos}`, { headers: { Authorization: `Bearer ${currentToken}` } }),
             fetch(`${API_BASE_URL}${API_ROUTES.empresas}`, { headers: { Authorization: `Bearer ${currentToken}` } }),
             fetch(`${API_BASE_URL}${API_ROUTES.asesores}`, { headers: { Authorization: `Bearer ${currentToken}` } }),
@@ -183,12 +226,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             }
         }
         
-        const [clientesRes, productosRes, empresasRes, asesoresRes] = responses;
-
-        if (!clientesRes.ok) throw new Error('No se pudieron cargar los clientes');
-        const clientesData: Cliente[] = await clientesRes.json();
-        setClients(clientesData);
-        localStorage.setItem('clients', JSON.stringify(clientesData));
+        const [productosRes, empresasRes, asesoresRes] = responses;
 
         if (!productosRes.ok) throw new Error('No se pudo cargar la lista de precios');
         const productosData: Producto[] = await productosRes.json();
@@ -222,6 +260,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           if (freshAsesor) {
             setAsesorState(freshAsesor);
             localStorage.setItem('asesor', JSON.stringify(freshAsesor));
+            // Sync clients for the current advisor as well
+            await fetchClientsForAsesor(freshAsesor.idAsesor, currentToken);
           }
         }
 
@@ -234,7 +274,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     } finally {
         setIsSyncing(false);
     }
-}, [token, toast, logout]);
+  }, [token, toast, logout, fetchClientsForAsesor]);
 
   const login = async (username: string, password: string) => {
     let response;
@@ -298,12 +338,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setUser(userData);
     localStorage.setItem('user', JSON.stringify(userData));
 
-    // Fire-and-forget: Start sync but don't wait for it to complete.
-    // This makes the login feel instantaneous.
-    syncData(access_token);
+    await syncData(access_token);
 
-    // Restore persisted state from localStorage to avoid race conditions with layouts
-    // that depend on this state being present immediately after login.
     const storedAsesor = localStorage.getItem('asesor');
     if (storedAsesor) {
         setAsesorState(JSON.parse(storedAsesor));
@@ -317,11 +353,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     } else {
       router.push('/configuracion');
     }
-  };
-  
-  const setAsesor = (asesor: Asesor) => {
-    setAsesorState(asesor);
-    localStorage.setItem('asesor', JSON.stringify(asesor));
   };
   
   const setEmpresa = (empresa: Empresa) => {
