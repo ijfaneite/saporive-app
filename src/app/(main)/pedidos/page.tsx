@@ -285,8 +285,17 @@ export default function PedidosPage() {
                     return (
                         <Card key={pedido.idPedido}>
                             <CardContent className="p-3">
-                                <div className="grid grid-cols-[auto_1fr] gap-x-4">
-                                    <div className="flex flex-col items-start justify-center gap-0.5">
+                                <div className="grid grid-cols-[1fr_auto] gap-x-4">
+                                    <div className="min-w-0 text-right">
+                                        <p className="font-bold text-foreground truncate" title={pedido.idPedido}>
+                                            {pedido.idPedido}
+                                        </p>
+                                        <p className="truncate text-sm text-muted-foreground" title={cliente?.Cliente}>
+                                            {cliente?.Cliente || `ID: ${pedido.idCliente}`}
+                                        </p>
+                                        <p className="truncate text-xs text-muted-foreground">{pedido.Rif || cliente?.Rif || 'N/A'}</p>
+                                    </div>
+                                    <div className="flex flex-col items-end justify-center gap-0.5">
                                         <Badge 
                                             variant={getStatusVariant(pedido.Status)}
                                         >
@@ -298,15 +307,6 @@ export default function PedidosPage() {
                                         <p className="text-xs text-muted-foreground">
                                             {format(new Date(pedido.updatedAt), "h:mm a", { locale: es })}
                                         </p>
-                                    </div>
-                                    <div className="min-w-0 text-right">
-                                        <p className="font-bold text-foreground truncate" title={pedido.idPedido}>
-                                            {pedido.idPedido}
-                                        </p>
-                                        <p className="truncate text-sm text-muted-foreground" title={cliente?.Cliente}>
-                                            {cliente?.Cliente || `ID: ${pedido.idCliente}`}
-                                        </p>
-                                        <p className="truncate text-xs text-muted-foreground">{pedido.Rif || cliente?.Rif || 'N/A'}</p>
                                     </div>
                                 </div>
                                 <div className="flex justify-between items-end mt-2">
