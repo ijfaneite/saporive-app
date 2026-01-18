@@ -287,7 +287,7 @@ export default function PedidosPage() {
                             <CardContent className="p-3">
                                 <div className="grid grid-cols-[1fr_auto] gap-x-4">
                                     <div className="min-w-0 space-y-1 text-left">
-                                        <p className="font-bold text-primary truncate" title={pedido.idPedido}>
+                                        <p className="font-bold text-foreground truncate" title={pedido.idPedido}>
                                             {pedido.idPedido}
                                         </p>
                                         <p className="truncate text-sm text-muted-foreground" title={cliente?.Cliente}>
@@ -311,7 +311,7 @@ export default function PedidosPage() {
                                     </div>
                                 </div>
                                 <div className="flex justify-between items-end mt-2">
-                                    <p className="text-xl font-bold text-primary">{formatCurrency(pedido.totalPedido)}</p>
+                                    <p className="text-xl font-bold text-foreground">{formatCurrency(pedido.totalPedido)}</p>
                                     <div className="flex items-center gap-2">
                                         <Button variant="outline" size="icon" aria-label="Consultar Pedido" onClick={() => setViewingPedido(pedido)}>
                                             <Eye className="h-4 w-4 text-primary" />
@@ -383,3 +383,5 @@ export default function PedidosPage() {
     </div>
   );
 }
+
+    

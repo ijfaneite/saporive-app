@@ -191,10 +191,10 @@ export function PedidoForm({ mode, initialPedido, idPedidoGenerado, onSave, isSa
         <div className="space-y-4">
             <Card>
                 <CardContent className='p-3 text-sm'>
-                    <div className="flex justify-between items-start gap-4">
+                    <div className="grid grid-cols-[1fr_auto] gap-x-4">
                         {/* Left side */}
-                        <div className="space-y-1 min-w-0">
-                            <p className="font-bold text-lg text-primary truncate">{mode === 'nuevo' ? idPedidoGenerado : initialPedido?.idPedido}</p>
+                        <div className="min-w-0 flex-grow space-y-1 self-center">
+                            <p className="font-bold text-lg text-foreground truncate">{mode === 'nuevo' ? idPedidoGenerado : initialPedido?.idPedido}</p>
                             <p className="text-sm font-medium truncate">{selectedClient ? selectedClient.Cliente : 'Sin cliente'}</p>
                             {selectedClient && (
                                 <p className="text-xs text-muted-foreground truncate">{selectedClient.Rif}</p>
@@ -366,7 +366,7 @@ export function PedidoForm({ mode, initialPedido, idPedidoGenerado, onSave, isSa
                             Nro. Items: <span className="text-primary">{lineasPedido.length}</span>
                         </div>
                         <div className="text-xl font-bold">
-                            Total: <span className="text-primary">{formatCurrency(totalPedido)}</span>
+                            Total: <span className="text-foreground">{formatCurrency(totalPedido)}</span>
                         </div>
                     </div>
                     {!isViewMode && (
@@ -381,3 +381,5 @@ export function PedidoForm({ mode, initialPedido, idPedidoGenerado, onSave, isSa
         </div>
     )
 }
+
+    
