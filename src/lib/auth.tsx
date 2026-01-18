@@ -39,6 +39,54 @@ const eraseCookie = (name: string) => {
     }
 }
 
+// --- ENCRYPTION HELPERS ---
+const encryptData = (data: string): string => {
+    if (typeof window !== 'undefined') {
+        // Use encodeURIComponent to handle non-ASCII characters correctly
+        return window.btoa(unescape(encodeURIComponent(data)));
+    }
+    return data;
+};
+
+const decryptData = (encryptedData: string): string => {
+    if (typeof window !== 'undefined') {
+        try {
+            // Use decodeURIComponent to handle non-ASCII characters correctly
+            return decodeURIComponent(escape(window.atob(encryptedData)));
+        } catch (e) {
+            // This will happen if the string is not valid base64,
+            // which can be the case for old, unencrypted data.
+            return encryptedData;
+        }
+    }
+    return encryptedData;
+};
+
+const setEncryptedItem = (key: string, value: any) => {
+    if (typeof localStorage !== 'undefined') {
+        localStorage.setItem(key, encryptData(JSON.stringify(value)));
+    }
+}
+
+const getEncryptedItem = <T>(key: string): T | null => {
+    if (typeof localStorage === 'undefined') {
+        return null;
+    }
+    const storedValue = localStorage.getItem(key);
+    if (!storedValue) {
+        return null;
+    }
+    try {
+        // decryptData will handle both encrypted and unencrypted data for backwards compatibility
+        return JSON.parse(decryptData(storedValue)) as T;
+    } catch (error) {
+        console.error(`Failed to parse item '${key}' from localStorage`, error);
+        // If parsing fails, the data is corrupt, remove it.
+        localStorage.removeItem(key);
+        return null;
+    }
+}
+
 
 interface AuthContextType {
   user: User | null;
@@ -120,7 +168,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
         const clientesData: Cliente[] = await response.json();
         setClients(clientesData);
-        localStorage.setItem('clients', JSON.stringify(clientesData));
+        setEncryptedItem('clients', clientesData);
 
     } catch (error) {
         toast({
@@ -138,7 +186,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const setAsesor = (asesor: Asesor) => {
     setAsesorState(asesor);
-    localStorage.setItem('asesor', JSON.stringify(asesor));
+    setEncryptedItem('asesor', asesor);
     // When an advisor is set, fetch their specific clients.
     fetchClientsForAsesor(asesor.idAsesor);
   };
@@ -148,39 +196,35 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const storedToken = getCookie('auth_token');
       if (storedToken) {
         setToken(storedToken);
-        const storedUser = localStorage.getItem('user');
-        if (storedUser) setUser(JSON.parse(storedUser));
+        const storedUser = getEncryptedItem<User>('user');
+        if (storedUser) setUser(storedUser);
         
-        const storedAsesores = localStorage.getItem('asesores');
+        const storedAsesores = getEncryptedItem<Asesor[]>('asesores');
         if (storedAsesores) {
-            const parsedAsesores = JSON.parse(storedAsesores) as Asesor[];
-            setAsesores(parsedAsesores);
-            const storedAsesor = localStorage.getItem('asesor');
+            setAsesores(storedAsesores);
+            const storedAsesor = getEncryptedItem<Asesor>('asesor');
             if (storedAsesor) {
-                const parsedAsesor = JSON.parse(storedAsesor) as Asesor;
-                const found = parsedAsesores.find(a => a.idAsesor === parsedAsesor.idAsesor);
+                const found = storedAsesores.find(a => a.idAsesor === storedAsesor.idAsesor);
                 if (found) {
                     setAsesorState(found);
                     // If we have a stored advisor, we should have their clients stored too.
-                    const storedClients = localStorage.getItem('clients');
+                    const storedClients = getEncryptedItem<Cliente[]>('clients');
                     if (storedClients) {
-                        setClients(JSON.parse(storedClients));
+                        setClients(storedClients);
                     }
                 }
             }
         }
         
-        const storedProducts = localStorage.getItem('products');
-        if (storedProducts) setProducts(JSON.parse(storedProducts));
+        const storedProducts = getEncryptedItem<Producto[]>('products');
+        if (storedProducts) setProducts(storedProducts);
 
-        const storedEmpresas = localStorage.getItem('empresas');
+        const storedEmpresas = getEncryptedItem<Empresa[]>('empresas');
         if (storedEmpresas) {
-            const parsedEmpresas = JSON.parse(storedEmpresas) as Empresa[];
-            setEmpresas(parsedEmpresas);
-            const storedEmpresa = localStorage.getItem('empresa');
+            setEmpresas(storedEmpresas);
+            const storedEmpresa = getEncryptedItem<Empresa>('empresa');
             if (storedEmpresa) {
-                const parsedSelected = JSON.parse(storedEmpresa) as Empresa;
-                const found = parsedEmpresas.find(e => e.idEmpresa === parsedSelected.idEmpresa);
+                const found = storedEmpresas.find(e => e.idEmpresa === storedEmpresa.idEmpresa);
                 if (found) {
                      setSelectedEmpresaState(found);
                 } else {
@@ -231,35 +275,33 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         if (!productosRes.ok) throw new Error('No se pudo cargar la lista de precios');
         const productosData: Producto[] = await productosRes.json();
         setProducts(productosData);
-        localStorage.setItem('products', JSON.stringify(productosData));
+        setEncryptedItem('products', productosData);
 
         if (!empresasRes.ok) throw new Error('No se pudieron cargar las empresas');
         const empresasData: Empresa[] = await empresasRes.json();
         setEmpresas(empresasData);
-        localStorage.setItem('empresas', JSON.stringify(empresasData));
+        setEncryptedItem('empresas', empresasData);
         
-        const localEmpresa = localStorage.getItem('empresa');
+        const localEmpresa = getEncryptedItem<Empresa>('empresa');
         if(localEmpresa) {
-          const parsedEmpresa = JSON.parse(localEmpresa) as Empresa;
-          const freshEmpresa = empresasData.find(e => e.idEmpresa === parsedEmpresa.idEmpresa);
+          const freshEmpresa = empresasData.find(e => e.idEmpresa === localEmpresa.idEmpresa);
           if (freshEmpresa) {
             setSelectedEmpresaState(freshEmpresa);
-            localStorage.setItem('empresa', JSON.stringify(freshEmpresa));
+            setEncryptedItem('empresa', freshEmpresa);
           }
         }
 
         if (!asesoresRes.ok) throw new Error('No se pudieron cargar los asesores');
         const asesoresData: Asesor[] = await asesoresRes.json();
         setAsesores(asesoresData);
-        localStorage.setItem('asesores', JSON.stringify(asesoresData));
+        setEncryptedItem('asesores', asesoresData);
 
-        const localAsesor = localStorage.getItem('asesor');
+        const localAsesor = getEncryptedItem<Asesor>('asesor');
         if(localAsesor) {
-          const parsedAsesor = JSON.parse(localAsesor) as Asesor;
-          const freshAsesor = asesoresData.find(a => a.idAsesor === parsedAsesor.idAsesor);
+          const freshAsesor = asesoresData.find(a => a.idAsesor === localAsesor.idAsesor);
           if (freshAsesor) {
             setAsesorState(freshAsesor);
-            localStorage.setItem('asesor', JSON.stringify(freshAsesor));
+            setEncryptedItem('asesor', freshAsesor);
             // Sync clients for the current advisor as well
             await fetchClientsForAsesor(freshAsesor.idAsesor, currentToken);
           }
@@ -336,19 +378,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     const userData: User = await userResponse.json();
     setUser(userData);
-    localStorage.setItem('user', JSON.stringify(userData));
+    setEncryptedItem('user', userData);
 
     await syncData(access_token);
 
-    const storedAsesor = localStorage.getItem('asesor');
+    const storedAsesor = getEncryptedItem<Asesor>('asesor');
     if (storedAsesor) {
-        setAsesorState(JSON.parse(storedAsesor));
+        setAsesorState(storedAsesor);
     }
 
-    const storedEmpresa = localStorage.getItem('empresa');
+    const storedEmpresa = getEncryptedItem<Empresa>('empresa');
     if (storedEmpresa) {
-      const parsedEmpresa = JSON.parse(storedEmpresa) as Empresa;
-      setSelectedEmpresaState(parsedEmpresa);
+      setSelectedEmpresaState(storedEmpresa);
       router.push('/pedidos');
     } else {
       router.push('/configuracion');
@@ -357,13 +398,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   
   const setEmpresa = (empresa: Empresa) => {
     setSelectedEmpresaState(empresa);
-    localStorage.setItem('empresa', JSON.stringify(empresa));
+    setEncryptedItem('empresa', empresa);
   };
 
   const updateEmpresaInState = (updatedEmpresa: Empresa) => {
     const updatedEmpresas = empresas.map(e => e.idEmpresa === updatedEmpresa.idEmpresa ? updatedEmpresa : e);
     setEmpresas(updatedEmpresas);
-    localStorage.setItem('empresas', JSON.stringify(updatedEmpresas));
+    setEncryptedItem('empresas', updatedEmpresas);
     
     if (selectedEmpresa?.idEmpresa === updatedEmpresa.idEmpresa) {
         setEmpresa(updatedEmpresa);
