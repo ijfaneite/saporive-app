@@ -252,10 +252,18 @@ export function PedidoForm({ mode, initialPedido, idPedidoGenerado, onSave, isSa
                                 </div>
                                 <ScrollArea className="h-56">
                                     <div className="p-1">
-                                    {filteredProducts.length > 0 ? filteredProducts.map(p => (
+                                    {filteredProducts.length > 0 ? filteredProducts.map(p => {
+                                        const isAdded = lineasPedido.some(linea => linea.producto.idProducto === p.idProducto);
+                                        return (
                                         <div key={p.idProducto} 
-                                            className="flex items-center justify-between p-2 hover:bg-muted rounded-sm cursor-pointer"
+                                            className={cn(
+                                                "flex items-center justify-between p-2 rounded-sm",
+                                                isAdded 
+                                                    ? "opacity-50 cursor-not-allowed" 
+                                                    : "cursor-pointer hover:bg-muted"
+                                            )}
                                             onClick={() => {
+                                                if (isAdded) return;
                                                 handleAddProducto(p);
                                                 setProductPopoverOpen(false);
                                                 setProductSearch("");
@@ -265,9 +273,9 @@ export function PedidoForm({ mode, initialPedido, idPedidoGenerado, onSave, isSa
                                                 <p className="font-semibold text-sm">{p.Producto}</p>
                                                 <p className="text-xs text-muted-foreground">{formatCurrency(p.Precio)}</p>
                                             </div>
-                                            <PlusCircle className="h-5 w-5 text-primary" />
+                                            <PlusCircle className={cn("h-5 w-5", isAdded ? "text-muted-foreground" : "text-primary")} />
                                         </div>
-                                    )) : <p className="text-center text-sm text-muted-foreground p-4">No se encontraron productos.</p>}
+                                    )}) : <p className="text-center text-sm text-muted-foreground p-4">No se encontraron productos.</p>}
                                     </div>
                                 </ScrollArea>
                             </PopoverContent>

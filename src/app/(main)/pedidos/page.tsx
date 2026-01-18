@@ -324,7 +324,12 @@ export default function PedidosPage() {
                                             </a>
                                         </Link>
                                         <Link href={`/pedidos/${pedido.idPedido}`} passHref>
-                                            <Button variant="outline" size="icon" aria-label="Editar Pedido">
+                                            <Button
+                                              variant="outline"
+                                              size="icon"
+                                              aria-label="Editar Pedido"
+                                              disabled={pedido.Status.toLowerCase() === 'enviado'}
+                                            >
                                                 <Pencil className="h-4 w-4 text-primary" />
                                             </Button>
                                         </Link>
