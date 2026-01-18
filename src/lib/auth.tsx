@@ -136,8 +136,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     eraseCookie('auth_token');
     localStorage.removeItem('user');
-    localStorage.removeItem('asesor');
-    localStorage.removeItem('empresa');
     localStorage.removeItem('asesores');
     localStorage.removeItem('clients');
     localStorage.removeItem('products');
