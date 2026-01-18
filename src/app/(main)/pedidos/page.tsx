@@ -72,16 +72,6 @@ export default function PedidosPage() {
   
   useEffect(() => {
     fetchPedidos();
-
-    const handleFocus = () => {
-      fetchPedidos();
-    };
-
-    window.addEventListener('focus', handleFocus);
-
-    return () => {
-      window.removeEventListener('focus', handleFocus);
-    };
   }, [fetchPedidos]);
 
   const updateStatusToEnviado = useCallback(async (pedidoToUpdate: Pedido): Promise<void> => {
@@ -383,5 +373,3 @@ export default function PedidosPage() {
     </div>
   );
 }
-
-    
