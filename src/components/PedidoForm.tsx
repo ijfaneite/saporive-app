@@ -12,6 +12,10 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from '@/lib/utils';
 import { useToast } from "@/hooks/use-toast";
+import { Badge } from '@/components/ui/badge';
+import { getStatusVariant } from '@/lib/status-config';
+import { format } from 'date-fns';
+import { es } from 'date-fns/locale';
 
 type LineaPedido = {
   id: string; 
@@ -169,18 +173,42 @@ export function PedidoForm({ mode, initialPedido, idPedidoGenerado, onSave, isSa
         return clients.find(c => c.idCliente === selectedClientId)?.Cliente || "Cliente no encontrado";
       }, [selectedClientId, clients]);
 
+    const fechaDelPedido = useMemo(() => {
+        return initialPedido ? new Date(initialPedido.fechaPedido) : new Date();
+    }, [initialPedido]);
+
+    const horaUltimaActualizacion = useMemo(() => {
+        // For new orders, it's the current time. For existing, it's the update time.
+        return initialPedido ? new Date(initialPedido.updatedAt) : new Date();
+    }, [initialPedido]);
+
+    const statusDelPedido = useMemo(() => {
+        if (mode === 'nuevo') return 'Pendiente';
+        return initialPedido?.Status || 'Desconocido';
+    }, [mode, initialPedido]);
+
     return (
         <div className="space-y-4">
             <Card>
-                <CardContent className='p-2 text-sm'>
-                    <div className="flex justify-between items-center">
-                        <div className="flex items-center gap-2">
-                            <Package className="h-5 w-5 text-muted-foreground" />
-                            <span className="font-bold text-lg text-primary">{mode === 'nuevo' ? idPedidoGenerado : initialPedido?.idPedido}</span>
+                <CardContent className='p-3 text-sm'>
+                    <div className="flex justify-between items-start">
+                        {/* Left side */}
+                        <div className="space-y-1">
+                            <div className="flex items-center gap-2">
+                                <Package className="h-5 w-5 text-muted-foreground" />
+                                <span className="font-bold text-lg text-primary">{mode === 'nuevo' ? idPedidoGenerado : initialPedido?.idPedido}</span>
+                            </div>
+                            <div className="flex items-center gap-2 pl-1">
+                                <User className="h-4 w-4 text-muted-foreground" />
+                                <span className="truncate text-xs text-muted-foreground">{asesor?.Asesor || 'No seleccionado'}</span>
+                            </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                            <User className="h-5 w-5 text-muted-foreground" />
-                            <span className="truncate">{asesor?.Asesor || 'No seleccionado'}</span>
+
+                        {/* Right side */}
+                        <div className="flex flex-col items-end text-right gap-1">
+                            <span className="text-xs">{format(fechaDelPedido, "dd/MMM/yyyy", { locale: es })}</span>
+                            <span className="text-xs text-muted-foreground">{format(horaUltimaActualizacion, "h:mm a", { locale: es })}</span>
+                            <Badge variant={getStatusVariant(statusDelPedido)}>{statusDelPedido}</Badge>
                         </div>
                     </div>
                 </CardContent>
