@@ -285,7 +285,20 @@ export default function PedidosPage() {
                     return (
                         <Card key={pedido.idPedido}>
                             <CardContent className="p-3">
-                                <div className="grid grid-cols-[1fr_auto] gap-x-2">
+                                <div className="grid grid-cols-[auto_1fr] gap-x-4">
+                                    <div className="flex flex-col items-start justify-center gap-0.5">
+                                        <Badge 
+                                            variant={getStatusVariant(pedido.Status)}
+                                        >
+                                            {pedido.Status}
+                                        </Badge>
+                                        <p className="text-xs text-muted-foreground">
+                                            {format(new Date(pedido.fechaPedido), "dd/MMM/yyyy", { locale: es })}
+                                        </p>
+                                        <p className="text-xs text-muted-foreground">
+                                            {format(new Date(pedido.updatedAt), "h:mm a", { locale: es })}
+                                        </p>
+                                    </div>
                                     <div className="min-w-0">
                                         <p className="font-bold text-foreground truncate" title={pedido.idPedido}>
                                             {pedido.idPedido}
@@ -294,17 +307,6 @@ export default function PedidosPage() {
                                             {cliente?.Cliente || `ID: ${pedido.idCliente}`}
                                         </p>
                                         <p className="truncate text-xs text-muted-foreground">{pedido.Rif || cliente?.Rif || 'N/A'}</p>
-                                    </div>
-                                    <div className='text-right'>
-                                      <p className="text-xs text-muted-foreground">
-                                          {format(new Date(pedido.fechaPedido), "dd/MMM/yyyy", { locale: es })}
-                                      </p>
-                                      <Badge 
-                                        variant={getStatusVariant(pedido.Status)}
-                                        className="mt-1"
-                                      >
-                                        {pedido.Status}
-                                      </Badge>
                                     </div>
                                 </div>
                                 <div className="flex justify-between items-end mt-2">
@@ -324,12 +326,7 @@ export default function PedidosPage() {
                                             </a>
                                         </Link>
                                         {pedido.Status.toLowerCase() === 'enviado' ? (
-                                            <Button
-                                                variant="outline"
-                                                size="icon"
-                                                aria-label="Editar Pedido"
-                                                disabled
-                                            >
+                                            <Button variant="outline" size="icon" aria-label="Editar Pedido" disabled>
                                                 <Pencil className="h-4 w-4" />
                                             </Button>
                                         ) : (
