@@ -286,7 +286,7 @@ export default function PedidosPage() {
                         <Card key={pedido.idPedido}>
                             <CardContent className="p-3">
                                 <div className="grid grid-cols-[1fr_auto] gap-x-4">
-                                    <div className="min-w-0 text-right">
+                                    <div className="min-w-0">
                                         <p className="font-bold text-foreground truncate" title={pedido.idPedido}>
                                             {pedido.idPedido}
                                         </p>
@@ -382,3 +382,5 @@ export default function PedidosPage() {
     </div>
   );
 }
+
+    
