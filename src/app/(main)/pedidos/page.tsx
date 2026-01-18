@@ -39,7 +39,11 @@ export default function PedidosPage() {
     }
     setIsLoading(true);
     try {
-      const pedidosRes = await fetch(`${API_BASE_URL}${API_ROUTES.pedidos}`, {
+      const url = new URL(`${API_BASE_URL}${API_ROUTES.pedidos}`);
+      url.searchParams.append('id_asesor', asesor.idAsesor);
+      url.searchParams.append('limit', '2000'); // Get up to 2000 records, should be enough for now
+
+      const pedidosRes = await fetch(url.toString(), {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -53,11 +57,11 @@ export default function PedidosPage() {
       
       const pedidosData: Pedido[] = await pedidosRes.json();
 
-      const asesorPedidos = pedidosData
-        .filter(p => p.idAsesor === asesor.idAsesor)
+      // The API now returns filtered data, so we just need to sort it.
+      const sortedPedidos = pedidosData
         .sort((a, b) => new Date(b.fechaPedido).getTime() - new Date(a.fechaPedido).getTime());
 
-      setPedidos(asesorPedidos);
+      setPedidos(sortedPedidos);
 
     } catch (error) {
       toast({
@@ -71,8 +75,10 @@ export default function PedidosPage() {
   }, [token, asesor, toast, logout]);
   
   useEffect(() => {
-    fetchPedidos();
-  }, [fetchPedidos]);
+    if (asesor) {
+      fetchPedidos();
+    }
+  }, [asesor, fetchPedidos]);
 
   const updateStatusToEnviado = useCallback(async (pedidoToUpdate: Pedido): Promise<void> => {
     if (!token || !asesor) {
@@ -276,7 +282,7 @@ export default function PedidosPage() {
                         <Card key={pedido.idPedido}>
                             <CardContent className="p-3">
                                 <div className="grid grid-cols-[1fr_auto] gap-x-4">
-                                    <div className="min-w-0 space-y-1 text-left">
+                                    <div className="min-w-0 space-y-1">
                                         <p className="font-bold text-foreground truncate" title={pedido.idPedido}>
                                             {pedido.idPedido}
                                         </p>
@@ -286,7 +292,7 @@ export default function PedidosPage() {
                                         <p className="truncate text-xs text-muted-foreground">{pedido.Rif || cliente?.Rif || 'N/A'}</p>
                                     </div>
 
-                                    <div className="flex flex-col items-end justify-center gap-0.5">
+                                    <div className="flex flex-col items-end justify-center gap-0.5 text-right">
                                         <Badge 
                                             variant={getStatusVariant(pedido.Status)}
                                         >
