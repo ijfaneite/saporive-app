@@ -193,22 +193,22 @@ export function PedidoForm({ mode, initialPedido, idPedidoGenerado, onSave, isSa
                 <CardContent className='p-3 text-sm'>
                     <div className="flex justify-between items-start">
                         {/* Left side */}
-                        <div className="space-y-1">
-                            <div className="flex items-center gap-2">
-                                <Package className="h-5 w-5 text-muted-foreground" />
-                                <span className="font-bold text-lg text-primary">{mode === 'nuevo' ? idPedidoGenerado : initialPedido?.idPedido}</span>
-                            </div>
-                            <div className="flex items-center gap-2 pl-1">
-                                <User className="h-4 w-4 text-muted-foreground" />
-                                <span className="truncate text-xs text-muted-foreground">{asesor?.Asesor || 'No seleccionado'}</span>
-                            </div>
+                        <div className="flex flex-col items-start gap-1">
+                            <Badge variant={getStatusVariant(statusDelPedido)}>{statusDelPedido}</Badge>
+                            <span className="text-xs">{format(fechaDelPedido, "dd/MMM/yyyy", { locale: es })}</span>
+                            <span className="text-xs text-muted-foreground">{format(horaUltimaActualizacion, "h:mm a", { locale: es })}</span>
                         </div>
 
                         {/* Right side */}
-                        <div className="flex flex-col items-end text-right gap-1">
-                            <span className="text-xs">{format(fechaDelPedido, "dd/MMM/yyyy", { locale: es })}</span>
-                            <span className="text-xs text-muted-foreground">{format(horaUltimaActualizacion, "h:mm a", { locale: es })}</span>
-                            <Badge variant={getStatusVariant(statusDelPedido)}>{statusDelPedido}</Badge>
+                        <div className="space-y-1 text-right">
+                            <div className="flex items-center justify-end gap-2">
+                                <Package className="h-5 w-5 text-muted-foreground" />
+                                <span className="font-bold text-lg text-primary">{mode === 'nuevo' ? idPedidoGenerado : initialPedido?.idPedido}</span>
+                            </div>
+                            <div className="flex items-center justify-end gap-2 pl-1">
+                                <User className="h-4 w-4 text-muted-foreground" />
+                                <span className="truncate text-sm text-muted-foreground">{selectedClientId ? selectedClientName : 'Sin cliente'}</span>
+                            </div>
                         </div>
                     </div>
                 </CardContent>
