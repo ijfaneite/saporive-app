@@ -15,7 +15,7 @@ const setCookie = (name: string, value: string, days: number) => {
         expires = "; expires=" + date.toUTCString();
     }
     if (typeof document !== 'undefined') {
-        document.cookie = name + "=" + (value || "")  + expires + "; path=/";
+        document.cookie = name + "=" + (encryptData(value) || "")  + expires + "; path=/";
     }
 }
 
@@ -28,7 +28,11 @@ const getCookie = (name: string): string | null => {
     for(let i=0; i < ca.length; i++) {
         let c = ca[i];
         while (c.charAt(0)==' ') c = c.substring(1,c.length);
-        if (c.indexOf(nameEQ) == 0) return c.substring(nameEQ.length,c.length);
+        if (c.indexOf(nameEQ) == 0) {
+            const encryptedValue = c.substring(nameEQ.length,c.length);
+            if (!encryptedValue) return null;
+            return decryptData(encryptedValue);
+        }
     }
     return null;
 }
@@ -126,8 +130,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const logout = useCallback(() => {
     setUser(null);
     setToken(null);
-    setAsesorState(null);
-    setSelectedEmpresaState(null);
     
     setAsesores([]);
     setClients([]);
@@ -209,6 +211,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                     const storedClients = getEncryptedItem<Cliente[]>('clients');
                     if (storedClients) {
                         setClients(storedClients);
+                    } else {
+                        // Fetch if not present, maybe due to a previous session or error
+                        fetchClientsForAsesor(found.idAsesor, storedToken);
                     }
                 }
             }
@@ -236,7 +241,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [fetchClientsForAsesor]);
 
   const syncData = useCallback(async (tokenOverride?: string) => {
     const currentToken = tokenOverride || token;
@@ -303,6 +308,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             // Sync clients for the current advisor as well
             await fetchClientsForAsesor(freshAsesor.idAsesor, currentToken);
           }
+        } else {
+            // If no advisor is set locally, clear local clients to avoid showing stale data.
+            setClients([]);
+            localStorage.removeItem('clients');
         }
 
     } catch (error) {
