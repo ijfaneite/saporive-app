@@ -323,16 +323,26 @@ export default function PedidosPage() {
                                                 </Button>
                                             </a>
                                         </Link>
-                                        <Link href={`/pedidos/${pedido.idPedido}`} passHref>
+                                        {pedido.Status.toLowerCase() === 'enviado' ? (
                                             <Button
-                                              variant="outline"
-                                              size="icon"
-                                              aria-label="Editar Pedido"
-                                              disabled={pedido.Status.toLowerCase() === 'enviado'}
+                                                variant="outline"
+                                                size="icon"
+                                                aria-label="Editar Pedido"
+                                                disabled
                                             >
-                                                <Pencil className="h-4 w-4 text-primary" />
+                                                <Pencil className="h-4 w-4" />
                                             </Button>
-                                        </Link>
+                                        ) : (
+                                            <Link href={`/pedidos/${pedido.idPedido}`} passHref>
+                                                <Button
+                                                    variant="outline"
+                                                    size="icon"
+                                                    aria-label="Editar Pedido"
+                                                >
+                                                    <Pencil className="h-4 w-4 text-primary" />
+                                                </Button>
+                                            </Link>
+                                        )}
                                     </div>
                                 </div>
                             </CardContent>
