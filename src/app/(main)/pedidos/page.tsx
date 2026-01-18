@@ -41,8 +41,7 @@ export default function PedidosPage() {
     try {
       const url = new URL(`${API_BASE_URL}${API_ROUTES.pedidos}`);
       url.searchParams.append('id_asesor', asesor.idAsesor);
-      url.searchParams.append('limit', '2000'); // Get up to 2000 records, should be enough for now
-
+      
       const pedidosRes = await fetch(url.toString(), {
         headers: { Authorization: `Bearer ${token}` },
       });
