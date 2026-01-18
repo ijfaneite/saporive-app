@@ -23,24 +23,41 @@ import { getStatusVariant } from '@/lib/status-config';
 
 
 export default function PedidosPage() {
-  const { token, asesor, clients, logout, products } = useAuth();
+  const { token, asesor, clients, logout } = useAuth();
+  const { toast } = useToast();
+
   const [pedidos, setPedidos] = useState<Pedido[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const { toast } = useToast();
+  const [isFetchingMore, setIsFetchingMore] = useState(false);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  
   const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState(searchTerm);
+  
   const [viewingPedido, setViewingPedido] = useState<Pedido | null>(null);
   const [sharingPedido, setSharingPedido] = useState<Pedido | null>(null);
   const [isSharing, setIsSharing] = useState(false);
   const shareComponentRef = useRef<HTMLDivElement>(null);
+  const PAGE_SIZE = 25;
 
-  const fetchPedidos = useCallback(async () => {
+  const fetchPedidos = useCallback(async (pageNum: number, search: string) => {
     if (!token || !asesor) {
       return;
     }
-    setIsLoading(true);
+
+    if (pageNum === 1) setIsLoading(true);
+    else setIsFetchingMore(true);
+
     try {
+      const offset = (pageNum - 1) * PAGE_SIZE;
       const url = new URL(`${API_BASE_URL}${API_ROUTES.pedidos}`);
       url.searchParams.append('id_asesor', asesor.idAsesor);
+      url.searchParams.append('offset', String(offset));
+      url.searchParams.append('limit', String(PAGE_SIZE));
+      if (search) {
+        url.searchParams.append('search', search);
+      }
       
       const pedidosRes = await fetch(url.toString(), {
         headers: { Authorization: `Bearer ${token}` },
@@ -54,13 +71,16 @@ export default function PedidosPage() {
 
       if (!pedidosRes.ok) throw new Error('No se pudieron cargar los pedidos');
       
-      const pedidosData: Pedido[] = await pedidosRes.json();
+      const newPedidos: Pedido[] = await pedidosRes.json();
 
-      // The API now returns filtered data, so we just need to sort it.
-      const sortedPedidos = pedidosData
-        .sort((a, b) => new Date(b.fechaPedido).getTime() - new Date(a.fechaPedido).getTime());
-
-      setPedidos(sortedPedidos);
+      setPedidos(prev => pageNum === 1 ? newPedidos : [...prev, ...newPedidos]);
+      
+      if (newPedidos.length < PAGE_SIZE) {
+        setHasMore(false);
+      } else {
+        setHasMore(true);
+      }
+      setPage(pageNum);
 
     } catch (error) {
       toast({
@@ -69,30 +89,51 @@ export default function PedidosPage() {
         description: error instanceof Error ? error.message : "Ocurrió un error al cargar los datos.",
       });
     } finally {
-      setIsLoading(false);
+      if (pageNum === 1) setIsLoading(false);
+      else setIsFetchingMore(false);
     }
   }, [token, asesor, toast, logout]);
   
+  // Debounce search term
+  useEffect(() => {
+    const handler = setTimeout(() => {
+        setDebouncedSearchTerm(searchTerm);
+    }, 500);
+    return () => clearTimeout(handler);
+  }, [searchTerm]);
+
+  const handleRefresh = useCallback(() => {
+    setPage(1);
+    setHasMore(true);
+    fetchPedidos(1, debouncedSearchTerm);
+  }, [debouncedSearchTerm, fetchPedidos]);
+
+  // Effect for initial load and search term changes
   useEffect(() => {
     if (asesor) {
-      fetchPedidos();
+      handleRefresh();
     }
-  }, [asesor, fetchPedidos]);
+  }, [asesor, debouncedSearchTerm, handleRefresh]);
+  
+  const observer = useRef<IntersectionObserver>();
+  const lastPedidoElementRef = useCallback(node => {
+      if (isLoading || isFetchingMore) return;
+      if (observer.current) observer.current.disconnect();
+      observer.current = new IntersectionObserver(entries => {
+          if (entries[0].isIntersecting && hasMore) {
+              fetchPedidos(page + 1, debouncedSearchTerm);
+          }
+      });
+      if (node) observer.current.observe(node);
+  }, [isLoading, isFetchingMore, hasMore, page, debouncedSearchTerm, fetchPedidos]);
 
   const updateStatusToEnviado = useCallback(async (pedidoToUpdate: Pedido): Promise<void> => {
     if (!token || !asesor) {
-        toast({
-            variant: "destructive",
-            title: "Error de Sincronización",
-            description: "No se pudo actualizar el estado del pedido.",
-        });
+        toast({ variant: "destructive", title: "Error de Sincronización", description: "No se pudo actualizar el estado del pedido." });
         return;
     }
     
-    const currentStatus = pedidoToUpdate.Status.toLowerCase();
-    if (currentStatus === 'enviado') {
-        return; // Already sent, no need to update
-    }
+    if (pedidoToUpdate.Status.toLowerCase() === 'enviado') return;
 
     const detallesParaEnviar: DetallePedidoBase[] = pedidoToUpdate.detalles.map(linea => ({
         idProducto: linea.idProducto,
@@ -114,10 +155,7 @@ export default function PedidosPage() {
     try {
       const response = await fetch(`${API_BASE_URL}${API_ROUTES.pedidos}${pedidoToUpdate.idPedido}`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify(pedidoPayload),
       });
 
@@ -128,27 +166,16 @@ export default function PedidosPage() {
       }
 
       if (response.ok) {
-        toast({
-           title: 'Estado Actualizado',
-           description: 'El pedido se ha marcado como "Enviado".'
-       });
-       fetchPedidos();
+        toast({ title: 'Estado Actualizado', description: 'El pedido se ha marcado como "Enviado".' });
+        handleRefresh();
       } else {
         const errorData = await response.json().catch(() => ({ detail: 'No se pudo cambiar el estado.' }));
-        toast({
-            variant: 'destructive',
-            title: 'Error al actualizar',
-            description: errorData.detail,
-        });
+        toast({ variant: 'destructive', title: 'Error al actualizar', description: errorData.detail });
       }
     } catch (error) {
-      toast({
-        variant: "destructive",
-        title: "Error de Conexión",
-        description: "No se pudo comunicar con el servidor.",
-      });
+      toast({ variant: "destructive", title: "Error de Conexión", description: "No se pudo comunicar con el servidor." });
     }
-  }, [token, asesor, toast, logout, fetchPedidos]);
+  }, [token, asesor, toast, logout, handleRefresh]);
 
   useEffect(() => {
     if (sharingPedido && shareComponentRef.current) {
@@ -187,10 +214,7 @@ export default function PedidosPage() {
                 link.click();
                 document.body.removeChild(link);
                 URL.revokeObjectURL(link.href);
-                toast({
-                  title: 'Imagen descargada',
-                  description: 'La imagen del pedido se ha guardado en tu dispositivo.',
-                });
+                toast({ title: 'Imagen descargada', description: 'La imagen del pedido se ha guardado en tu dispositivo.' });
                 await updateStatusToEnviado(sharingPedido);
               }
             });
@@ -211,25 +235,6 @@ export default function PedidosPage() {
     return clients.find(c => c.idCliente === idCliente);
   }, [clients]);
 
-  const filteredPedidos = useMemo(() => {
-    return pedidos.filter(pedido => {
-        if (!searchTerm) return true;
-        const lowerCaseSearch = searchTerm.toLowerCase();
-        const cliente = getCliente(pedido.idCliente);
-
-        if (cliente?.Cliente.toLowerCase().includes(lowerCaseSearch)) return true;
-        if (cliente?.Rif.toLowerCase().includes(lowerCaseSearch)) return true;
-        if (pedido.Rif?.toLowerCase().includes(lowerCaseSearch)) return true;
-        if (pedido.idPedido.toLowerCase().includes(lowerCaseSearch)) return true;
-        if (pedido.Status.toLowerCase().includes(lowerCaseSearch)) return true;
-        
-        const fecha = format(new Date(pedido.fechaPedido), "dd MMM yyyy", { locale: es }).toLowerCase();
-        if (fecha.includes(lowerCaseSearch)) return true;
-        
-        return false;
-    });
-  }, [pedidos, searchTerm, getCliente]);
-
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value);
   }
@@ -239,8 +244,8 @@ export default function PedidosPage() {
       <div className="flex justify-between items-center flex-shrink-0">
         <h1 className="text-3xl font-bold font-headline text-primary">Pedidos</h1>
         <div className="flex gap-2">
-            <Button variant="outline" size="icon" onClick={fetchPedidos} disabled={isLoading}>
-                <RefreshCw className={cn(isLoading && 'animate-spin')}/>
+            <Button variant="outline" size="icon" onClick={handleRefresh} disabled={isLoading || isFetchingMore}>
+                <RefreshCw className={cn((isLoading || isFetchingMore) && 'animate-spin')}/>
             </Button>
             <Link href="/pedidos/nuevo" passHref>
                 <Button>
@@ -262,9 +267,9 @@ export default function PedidosPage() {
         <div className="flex-grow flex justify-center items-center">
             <Loader2 className="w-8 h-8 animate-spin text-primary" />
         </div>
-      ) : filteredPedidos.length === 0 ? (
+      ) : pedidos.length === 0 ? (
         <div className="flex-grow flex flex-col justify-center items-center text-center py-10 border-2 border-dashed rounded-lg">
-          <p className="text-muted-foreground mb-4">{searchTerm ? 'No se encontraron pedidos con ese criterio.' : 'No hay pedidos recientes.'}</p>
+          <p className="text-muted-foreground mb-4">{searchTerm ? 'No se encontraron pedidos con ese criterio.' : 'No hay pedidos para mostrar.'}</p>
           <Link href="/pedidos/nuevo" passHref>
               <Button>
                   <PlusCircle className="mr-2 h-4 w-4" />
@@ -275,23 +280,22 @@ export default function PedidosPage() {
       ) : (
         <ScrollArea className="flex-grow pr-4 -mr-4">
             <div className="space-y-4 pr-4">
-                {filteredPedidos.map(pedido => {
+                {pedidos.map((pedido, index) => {
                     const cliente = getCliente(pedido.idCliente);
+                    const isLastElement = index === pedidos.length - 1;
                     return (
-                        <Card key={pedido.idPedido}>
-                            <CardContent className="p-3">
-                                <div className="grid grid-cols-[1fr_auto] gap-x-4">
-                                    <div className="min-w-0 space-y-1">
-                                        <p className="font-bold text-foreground truncate" title={pedido.idPedido}>
-                                            {pedido.idPedido}
-                                        </p>
-                                        <p className="truncate text-sm text-muted-foreground" title={cliente?.Cliente}>
-                                            {cliente?.Cliente || `ID: ${pedido.idCliente}`}
-                                        </p>
-                                        <p className="truncate text-xs text-muted-foreground">{pedido.Rif || cliente?.Rif || 'N/A'}</p>
-                                    </div>
+                        <Card key={pedido.idPedido} ref={isLastElement ? lastPedidoElementRef : null}>
+                           <CardContent className="p-3">
+                               <div className="grid grid-cols-[1fr_auto] gap-x-4">
+                                   <div className="min-w-0 flex-grow space-y-1 self-center">
+                                       <p className="font-bold text-lg text-foreground truncate">{pedido.idPedido}</p>
+                                       <p className="font-medium truncate">{cliente ? cliente.Cliente : 'Sin cliente'}</p>
+                                       {cliente && (
+                                           <p className="text-xs text-muted-foreground truncate">{cliente.Rif}</p>
+                                       )}
+                                   </div>
 
-                                    <div className="flex flex-col items-end justify-center gap-0.5 text-right">
+                                    <div className="flex flex-col items-end gap-1 text-right">
                                         <Badge 
                                             variant={getStatusVariant(pedido.Status)}
                                         >
@@ -342,6 +346,11 @@ export default function PedidosPage() {
                         </Card>
                     )
                 })}
+                 {isFetchingMore && (
+                    <div className="flex justify-center items-center p-4">
+                        <Loader2 className="w-6 h-6 animate-spin text-primary" />
+                    </div>
+                 )}
             </div>
         </ScrollArea>
       )}
@@ -378,3 +387,5 @@ export default function PedidosPage() {
     </div>
   );
 }
+
+    
