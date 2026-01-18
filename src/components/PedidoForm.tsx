@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Loader2, PlusCircle, Trash2, ChevronsUpDown, Package, User, FileText } from 'lucide-react';
+import { Loader2, PlusCircle, Trash2, ChevronsUpDown } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from '@/lib/utils';
@@ -32,7 +32,7 @@ interface PedidoFormProps {
 }
 
 export function PedidoForm({ mode, initialPedido, idPedidoGenerado, onSave, isSaving }: PedidoFormProps) {
-    const { asesor, clients, products, selectedEmpresa } = useAuth();
+    const { clients, products, selectedEmpresa, asesor } = useAuth();
     const { toast } = useToast();
 
     const isViewMode = mode === 'consultar';
@@ -191,22 +191,13 @@ export function PedidoForm({ mode, initialPedido, idPedidoGenerado, onSave, isSa
         <div className="space-y-4">
             <Card>
                 <CardContent className='p-3 text-sm'>
-                    <div className="flex justify-between items-start">
+                    <div className="flex justify-between items-start gap-4">
                         {/* Left side */}
                         <div className="space-y-1">
-                            <div className="flex items-center gap-2">
-                                <Package className="h-5 w-5 text-muted-foreground" />
-                                <span className="font-bold text-lg text-primary">{mode === 'nuevo' ? idPedidoGenerado : initialPedido?.idPedido}</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <User className="h-4 w-4 text-muted-foreground" />
-                                <span className="truncate text-sm font-medium">{selectedClient ? selectedClient.Cliente : 'Sin cliente'}</span>
-                            </div>
+                            <p className="font-bold text-lg text-primary">{mode === 'nuevo' ? idPedidoGenerado : initialPedido?.idPedido}</p>
+                            <p className="truncate text-sm font-medium">{selectedClient ? selectedClient.Cliente : 'Sin cliente'}</p>
                             {selectedClient && (
-                                <div className="flex items-center gap-2">
-                                    <FileText className="h-4 w-4 text-muted-foreground" />
-                                    <span className="truncate text-xs text-muted-foreground">{selectedClient.Rif}</span>
-                                </div>
+                                <p className="truncate text-xs text-muted-foreground">{selectedClient.Rif}</p>
                             )}
                         </div>
 
