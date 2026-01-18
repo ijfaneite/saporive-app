@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Loader2, PlusCircle, Trash2, ChevronsUpDown, Package, User } from 'lucide-react';
+import { Loader2, PlusCircle, Trash2, ChevronsUpDown, Package, User, FileText } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from '@/lib/utils';
@@ -168,9 +168,9 @@ export function PedidoForm({ mode, initialPedido, idPedidoGenerado, onSave, isSa
         onSave(pedidoPayload);
     };
 
-    const selectedClientName = useMemo(() => {
-        if(!selectedClientId) return "Seleccione un cliente...";
-        return clients.find(c => c.idCliente === selectedClientId)?.Cliente || "Cliente no encontrado";
+    const selectedClient = useMemo(() => {
+        if (!selectedClientId) return null;
+        return clients.find(c => c.idCliente === selectedClientId) ?? null;
       }, [selectedClientId, clients]);
 
     const fechaDelPedido = useMemo(() => {
@@ -193,22 +193,28 @@ export function PedidoForm({ mode, initialPedido, idPedidoGenerado, onSave, isSa
                 <CardContent className='p-3 text-sm'>
                     <div className="flex justify-between items-start">
                         {/* Left side */}
-                        <div className="flex flex-col items-start gap-1">
-                            <Badge variant={getStatusVariant(statusDelPedido)}>{statusDelPedido}</Badge>
-                            <span className="text-xs">{format(fechaDelPedido, "dd/MMM/yyyy", { locale: es })}</span>
-                            <span className="text-xs text-muted-foreground">{format(horaUltimaActualizacion, "h:mm a", { locale: es })}</span>
-                        </div>
-
-                        {/* Right side */}
-                        <div className="space-y-1 text-right">
-                            <div className="flex items-center justify-end gap-2">
+                        <div className="space-y-1">
+                            <div className="flex items-center gap-2">
                                 <Package className="h-5 w-5 text-muted-foreground" />
                                 <span className="font-bold text-lg text-primary">{mode === 'nuevo' ? idPedidoGenerado : initialPedido?.idPedido}</span>
                             </div>
-                            <div className="flex items-center justify-end gap-2 pl-1">
+                            <div className="flex items-center gap-2">
                                 <User className="h-4 w-4 text-muted-foreground" />
-                                <span className="truncate text-sm text-muted-foreground">{selectedClientId ? selectedClientName : 'Sin cliente'}</span>
+                                <span className="truncate text-sm font-medium">{selectedClient ? selectedClient.Cliente : 'Sin cliente'}</span>
                             </div>
+                            {selectedClient && (
+                                <div className="flex items-center gap-2">
+                                    <FileText className="h-4 w-4 text-muted-foreground" />
+                                    <span className="truncate text-xs text-muted-foreground">{selectedClient.Rif}</span>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Right side */}
+                        <div className="flex flex-col items-end gap-1">
+                            <Badge variant={getStatusVariant(statusDelPedido)}>{statusDelPedido}</Badge>
+                            <span className="text-xs">{format(fechaDelPedido, "dd/MMM/yyyy", { locale: es })}</span>
+                            <span className="text-xs text-muted-foreground">{format(horaUltimaActualizacion, "h:mm a", { locale: es })}</span>
                         </div>
                     </div>
                 </CardContent>
@@ -222,7 +228,7 @@ export function PedidoForm({ mode, initialPedido, idPedidoGenerado, onSave, isSa
                 <Popover open={clientPopoverOpen} onOpenChange={setClientPopoverOpen}>
                     <PopoverTrigger asChild>
                     <Button variant="outline" role="combobox" aria-expanded={clientPopoverOpen} className="w-full justify-between font-normal" disabled={isViewMode}>
-                        <span className='truncate'>{selectedClientName}</span>
+                        <span className='truncate'>{selectedClient?.Cliente ?? "Seleccione un cliente..."}</span>
                         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                     </Button>
                     </PopoverTrigger>
