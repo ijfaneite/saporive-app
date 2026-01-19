@@ -54,7 +54,8 @@ export default function PedidosPage() {
       return;
     }
 
-    if (pageNum === 1) setIsLoading(true);
+    const isNewSearch = pageNum === 1;
+    if (isNewSearch) setIsLoading(true);
     else setIsFetchingMore(true);
 
     try {
@@ -81,7 +82,7 @@ export default function PedidosPage() {
       
       const newPedidos: Pedido[] = await pedidosRes.json();
 
-      setPedidos(prev => pageNum === 1 ? newPedidos : [...prev, ...newPedidos]);
+      setPedidos(prev => isNewSearch ? newPedidos : [...prev, ...newPedidos]);
       
       if (newPedidos.length < PAGE_SIZE) {
         setHasMore(false);
@@ -97,15 +98,14 @@ export default function PedidosPage() {
         description: error instanceof Error ? error.message : "Ocurrió un error al cargar los datos.",
       });
     } finally {
-      if (pageNum === 1) setIsLoading(false);
+      if (isNewSearch) setIsLoading(false);
       else setIsFetchingMore(false);
     }
   }, [token, asesor, toast, logout]);
   
-  // Debounce search term
   useEffect(() => {
     const handler = setTimeout(() => {
-        setDebouncedSearchTerm(searchTerm);
+      setDebouncedSearchTerm(searchTerm);
     }, 500);
     return () => clearTimeout(handler);
   }, [searchTerm]);
@@ -114,14 +114,14 @@ export default function PedidosPage() {
     if (asesor) {
       fetchPedidos(1, debouncedSearchTerm);
     }
-  }, [asesor, fetchPedidos, debouncedSearchTerm]);
+  }, [asesor, debouncedSearchTerm, fetchPedidos]);
 
-  // Effect for initial load and search term changes
   useEffect(() => {
     if (asesor) {
-      fetchPedidos(1, debouncedSearchTerm);
+      handleRefresh();
     }
-  }, [asesor, debouncedSearchTerm, fetchPedidos]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [asesor, debouncedSearchTerm]);
   
   const observer = useRef<IntersectionObserver>();
   const lastPedidoElementRef = useCallback(node => {
