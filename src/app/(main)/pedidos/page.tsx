@@ -111,17 +111,17 @@ export default function PedidosPage() {
   }, [searchTerm]);
 
   const handleRefresh = useCallback(() => {
-    setPage(1);
-    setHasMore(true);
-    fetchPedidos(1, debouncedSearchTerm);
-  }, [debouncedSearchTerm, fetchPedidos]);
+    if (asesor) {
+      fetchPedidos(1, debouncedSearchTerm);
+    }
+  }, [asesor, fetchPedidos, debouncedSearchTerm]);
 
   // Effect for initial load and search term changes
   useEffect(() => {
     if (asesor) {
-      handleRefresh();
+      fetchPedidos(1, debouncedSearchTerm);
     }
-  }, [asesor, handleRefresh]);
+  }, [asesor, debouncedSearchTerm, fetchPedidos]);
   
   const observer = useRef<IntersectionObserver>();
   const lastPedidoElementRef = useCallback(node => {
