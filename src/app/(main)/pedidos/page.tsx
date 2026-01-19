@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
 import { Pedido, PedidoCreatePayload, DetallePedidoBase } from '@/lib/types';
 import { API_BASE_URL, API_ROUTES } from '@/lib/config';
@@ -8,7 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { PlusCircle, Loader2, RefreshCw, Pencil, Printer, Eye, Share2 } from "lucide-react";
+import { PlusCircle, Loader2, RefreshCw, Pencil, Printer, Eye, Share2, MoreVertical } from "lucide-react";
 import Link from 'next/link';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -20,11 +21,18 @@ import { PedidoForm } from '@/components/PedidoForm';
 import html2canvas from 'html2canvas';
 import { PedidoShareImage } from '@/components/PedidoShareImage';
 import { getStatusVariant } from '@/lib/status-config';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 
 export default function PedidosPage() {
   const { token, asesor, clients, logout } = useAuth();
   const { toast } = useToast();
+  const router = useRouter();
 
   const [pedidos, setPedidos] = useState<Pedido[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -113,7 +121,7 @@ export default function PedidosPage() {
     if (asesor) {
       handleRefresh();
     }
-  }, [asesor, debouncedSearchTerm, handleRefresh]);
+  }, [asesor, debouncedSearchTerm]);
   
   const observer = useRef<IntersectionObserver>();
   const lastPedidoElementRef = useCallback(node => {
@@ -311,36 +319,43 @@ export default function PedidosPage() {
                                 </div>
                                 <div className="flex justify-between items-end mt-2">
                                     <p className="text-xl font-bold text-foreground">{formatCurrency(pedido.totalPedido)}</p>
-                                    <div className="flex items-center gap-2">
-                                        <Button variant="outline" size="icon" aria-label="Consultar Pedido" onClick={() => setViewingPedido(pedido)}>
-                                            <Eye className="h-4 w-4 text-primary" />
-                                        </Button>
-                                        <Button variant="outline" size="icon" aria-label="Compartir Pedido" onClick={() => setSharingPedido(pedido)} disabled={isSharing}>
-                                            {isSharing && sharingPedido?.idPedido === pedido.idPedido ? <Loader2 className="h-4 w-4 animate-spin" /> : <Share2 className="h-4 w-4 text-primary" />}
-                                        </Button>
-                                        <Link href={`/pedidos/${pedido.idPedido}/imprimir`} passHref legacyBehavior>
-                                            <a target="_blank" rel="noopener noreferrer">
-                                                <Button variant="outline" size="icon" aria-label="Imprimir Pedido">
-                                                    <Printer className="h-4 w-4 text-primary" />
-                                                </Button>
-                                            </a>
-                                        </Link>
-                                        {pedido.Status.toLowerCase() === 'enviado' ? (
-                                            <Button variant="outline" size="icon" aria-label="Editar Pedido" disabled>
-                                                <Pencil className="h-4 w-4" />
+                                    <DropdownMenu>
+                                        <DropdownMenuTrigger asChild>
+                                            <Button variant="ghost" size="icon" className="h-8 w-8">
+                                                <MoreVertical className="h-4 w-4" />
+                                                <span className="sr-only">Abrir menú</span>
                                             </Button>
-                                        ) : (
-                                            <Link href={`/pedidos/${pedido.idPedido}`} passHref>
-                                                <Button
-                                                    variant="outline"
-                                                    size="icon"
-                                                    aria-label="Editar Pedido"
-                                                >
-                                                    <Pencil className="h-4 w-4 text-primary" />
-                                                </Button>
-                                            </Link>
-                                        )}
-                                    </div>
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent align="end">
+                                            <DropdownMenuItem onClick={() => setViewingPedido(pedido)}>
+                                                <Eye className="mr-2 h-4 w-4" />
+                                                <span>Consultar</span>
+                                            </DropdownMenuItem>
+                                            <DropdownMenuItem onClick={() => setSharingPedido(pedido)} disabled={isSharing}>
+                                                {isSharing && sharingPedido?.idPedido === pedido.idPedido ? (
+                                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                                ) : (
+                                                    <Share2 className="mr-2 h-4 w-4" />
+                                                )}
+                                                <span>Compartir</span>
+                                            </DropdownMenuItem>
+                                            <DropdownMenuItem onClick={() => window.open(`/pedidos/${pedido.idPedido}/imprimir`, '_blank')}>
+                                                <Printer className="mr-2 h-4 w-4" />
+                                                <span>Imprimir</span>
+                                            </DropdownMenuItem>
+                                            <DropdownMenuItem
+                                                disabled={pedido.Status.toLowerCase() === 'enviado'}
+                                                onClick={() => {
+                                                    if (pedido.Status.toLowerCase() !== 'enviado') {
+                                                        router.push(`/pedidos/${pedido.idPedido}`);
+                                                    }
+                                                }}
+                                            >
+                                                <Pencil className="mr-2 h-4 w-4" />
+                                                <span>Editar</span>
+                                            </DropdownMenuItem>
+                                        </DropdownMenuContent>
+                                    </DropdownMenu>
                                 </div>
                             </CardContent>
                         </Card>
@@ -387,5 +402,3 @@ export default function PedidosPage() {
     </div>
   );
 }
-
-    
