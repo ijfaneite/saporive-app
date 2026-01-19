@@ -121,7 +121,7 @@ export default function PedidosPage() {
     if (asesor) {
       handleRefresh();
     }
-  }, [asesor, debouncedSearchTerm]);
+  }, [asesor, handleRefresh]);
   
   const observer = useRef<IntersectionObserver>();
   const lastPedidoElementRef = useCallback(node => {
