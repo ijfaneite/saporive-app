@@ -9,7 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { PlusCircle, Loader2, RefreshCw, Pencil, Printer, Eye, Share2, MoreVertical } from "lucide-react";
+import { PlusCircle, Loader2, RefreshCw, Pencil, Printer, Eye, Share2, MoreVertical, X } from "lucide-react";
 import Link from 'next/link';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -271,12 +271,24 @@ export default function PedidosPage() {
         </div>
       </div>
 
-      <Input 
-        placeholder="Buscar por cliente, RIF, ID, status..."
-        value={searchTerm}
-        onChange={(e) => setSearchTerm(e.target.value)}
-        className="flex-shrink-0"
-      />
+      <div className="relative flex-shrink-0">
+        <Input 
+          placeholder="Escriba aqui para buscar"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="pr-10"
+        />
+        {searchTerm && (
+            <Button 
+                variant="ghost" 
+                size="icon" 
+                className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8 rounded-full"
+                onClick={() => setSearchTerm('')}
+            >
+                <X className="h-4 w-4 text-muted-foreground" />
+            </Button>
+        )}
+      </div>
 
       {isLoading ? (
         <div className="flex-grow flex justify-center items-center">
