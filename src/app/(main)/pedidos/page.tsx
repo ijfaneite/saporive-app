@@ -327,7 +327,7 @@ export default function PedidosPage() {
                                             </Button>
                                         </DropdownMenuTrigger>
                                         <DropdownMenuContent align="end">
-                                            <DropdownMenuItem onSelect={() => setViewingPedido(pedido)}>
+                                            <DropdownMenuItem onSelect={() => setTimeout(() => setViewingPedido(pedido), 0)}>
                                                 <Eye className="mr-2 h-4 w-4" />
                                                 <span>Consultar</span>
                                             </DropdownMenuItem>
