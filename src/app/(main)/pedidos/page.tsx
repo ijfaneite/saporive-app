@@ -327,11 +327,11 @@ export default function PedidosPage() {
                                             </Button>
                                         </DropdownMenuTrigger>
                                         <DropdownMenuContent align="end">
-                                            <DropdownMenuItem onClick={() => setViewingPedido(pedido)}>
+                                            <DropdownMenuItem onSelect={() => setViewingPedido(pedido)}>
                                                 <Eye className="mr-2 h-4 w-4" />
                                                 <span>Consultar</span>
                                             </DropdownMenuItem>
-                                            <DropdownMenuItem onClick={() => setSharingPedido(pedido)} disabled={isSharing}>
+                                            <DropdownMenuItem onSelect={() => setSharingPedido(pedido)} disabled={isSharing}>
                                                 {isSharing && sharingPedido?.idPedido === pedido.idPedido ? (
                                                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                                                 ) : (
@@ -339,13 +339,13 @@ export default function PedidosPage() {
                                                 )}
                                                 <span>Compartir</span>
                                             </DropdownMenuItem>
-                                            <DropdownMenuItem onClick={() => window.open(`/pedidos/${pedido.idPedido}/imprimir`, '_blank')}>
+                                            <DropdownMenuItem onSelect={() => window.open(`/pedidos/${pedido.idPedido}/imprimir`, '_blank')}>
                                                 <Printer className="mr-2 h-4 w-4" />
                                                 <span>Imprimir</span>
                                             </DropdownMenuItem>
                                             <DropdownMenuItem
                                                 disabled={pedido.Status.toLowerCase() === 'enviado'}
-                                                onClick={() => {
+                                                onSelect={() => {
                                                     if (pedido.Status.toLowerCase() !== 'enviado') {
                                                         router.push(`/pedidos/${pedido.idPedido}`);
                                                     }
