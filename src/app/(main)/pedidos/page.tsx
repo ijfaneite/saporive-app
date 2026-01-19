@@ -273,7 +273,7 @@ export default function PedidosPage() {
 
       <div className="relative flex-shrink-0">
         <Input 
-          placeholder="Escriba aqui para buscar"
+          placeholder="Buscar por... Pedido, Estatus, Cliente, Rif"
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           className="pr-10"

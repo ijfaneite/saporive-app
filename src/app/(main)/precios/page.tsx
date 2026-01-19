@@ -1,8 +1,7 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useAuth } from '@/lib/auth';
-import { Producto } from '@/lib/types';
 import {
   Table,
   TableBody,
@@ -11,8 +10,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Loader2 } from 'lucide-react';
+import { Loader2, X } from 'lucide-react';
 import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 
 export default function PreciosPage() {
   const { products, isLoading: isAuthLoading } = useAuth();
@@ -20,8 +20,10 @@ export default function PreciosPage() {
 
   const filteredProductos = useMemo(() => {
     if (!searchTerm) return products;
+    const lowercasedTerm = searchTerm.toLowerCase();
     return products.filter(producto =>
-        producto.Producto.toLowerCase().includes(searchTerm.toLowerCase())
+        producto.Producto.toLowerCase().includes(lowercasedTerm) ||
+        producto.idProducto.toLowerCase().includes(lowercasedTerm)
     );
   }, [searchTerm, products]);
   
@@ -32,11 +34,24 @@ export default function PreciosPage() {
   return (
     <div className="p-4 space-y-4">
       <h1 className="text-3xl font-bold font-headline text-primary">Lista de Precios</h1>
-      <Input 
-        placeholder="Buscar producto..."
-        value={searchTerm}
-        onChange={(e) => setSearchTerm(e.target.value)}
-      />
+       <div className="relative">
+        <Input 
+          placeholder="Buscar por nombre o código..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="pr-10"
+        />
+        {searchTerm && (
+            <Button 
+                variant="ghost" 
+                size="icon" 
+                className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8 rounded-full"
+                onClick={() => setSearchTerm('')}
+            >
+                <X className="h-4 w-4 text-muted-foreground" />
+            </Button>
+        )}
+      </div>
       <div className="border rounded-lg">
         {isAuthLoading ? (
           <div className="flex items-center justify-center h-64">
@@ -54,7 +69,10 @@ export default function PreciosPage() {
               {filteredProductos.length > 0 ? (
                 filteredProductos.map((producto) => (
                   <TableRow key={producto.idProducto}>
-                    <TableCell className="font-medium">{producto.Producto}</TableCell>
+                    <TableCell className="font-medium">
+                      {producto.Producto}
+                      <p className="text-xs text-muted-foreground">{producto.idProducto}</p>
+                    </TableCell>
                     <TableCell className="text-right">{formatCurrency(producto.Precio)}</TableCell>
                   </TableRow>
                 ))
