@@ -120,8 +120,7 @@ export default function PedidosPage() {
     if (asesor) {
       handleRefresh();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [asesor, debouncedSearchTerm]);
+  }, [asesor, debouncedSearchTerm, handleRefresh]);
   
   const observer = useRef<IntersectionObserver>();
   const lastPedidoElementRef = useCallback(node => {
