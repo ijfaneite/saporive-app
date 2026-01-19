@@ -41,7 +41,6 @@ export default function PedidosPage() {
   const [hasMore, setHasMore] = useState(true);
   
   const [searchTerm, setSearchTerm] = useState('');
-  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState(searchTerm);
   
   const [viewingPedido, setViewingPedido] = useState<Pedido | null>(null);
   const [sharingPedido, setSharingPedido] = useState<Pedido | null>(null);
@@ -49,14 +48,18 @@ export default function PedidosPage() {
   const shareComponentRef = useRef<HTMLDivElement>(null);
   const PAGE_SIZE = 25;
 
-  const fetchPedidos = useCallback(async (pageNum: number, search: string) => {
+  const fetchPedidos = useCallback(async (pageNum: number) => {
     if (!token || !asesor) {
       return;
     }
 
-    const isNewSearch = pageNum === 1;
-    if (isNewSearch) setIsLoading(true);
-    else setIsFetchingMore(true);
+    const isInitialLoad = pageNum === 1;
+    if (isInitialLoad) {
+      setIsLoading(true);
+      setPedidos([]); // Clear previous results for a refresh
+    } else {
+      setIsFetchingMore(true);
+    }
 
     try {
       const offset = (pageNum - 1) * PAGE_SIZE;
@@ -64,9 +67,6 @@ export default function PedidosPage() {
       url.searchParams.append('id_asesor', asesor.idAsesor);
       url.searchParams.append('offset', String(offset));
       url.searchParams.append('limit', String(PAGE_SIZE));
-      if (search) {
-        url.searchParams.append('search', search);
-      }
       
       const pedidosRes = await fetch(url.toString(), {
         headers: { Authorization: `Bearer ${token}` },
@@ -82,13 +82,8 @@ export default function PedidosPage() {
       
       const newPedidos: Pedido[] = await pedidosRes.json();
 
-      setPedidos(prev => isNewSearch ? newPedidos : [...prev, ...newPedidos]);
-      
-      if (newPedidos.length < PAGE_SIZE) {
-        setHasMore(false);
-      } else {
-        setHasMore(true);
-      }
+      setPedidos(prev => isInitialLoad ? newPedidos : [...prev, ...newPedidos]);
+      setHasMore(newPedidos.length === PAGE_SIZE);
       setPage(pageNum);
 
     } catch (error) {
@@ -98,41 +93,57 @@ export default function PedidosPage() {
         description: error instanceof Error ? error.message : "Ocurrió un error al cargar los datos.",
       });
     } finally {
-      if (isNewSearch) setIsLoading(false);
+      if (isInitialLoad) setIsLoading(false);
       else setIsFetchingMore(false);
     }
   }, [token, asesor, toast, logout]);
   
-  useEffect(() => {
-    const handler = setTimeout(() => {
-      setDebouncedSearchTerm(searchTerm);
-    }, 500);
-    return () => clearTimeout(handler);
-  }, [searchTerm]);
-
   const handleRefresh = useCallback(() => {
     if (asesor) {
-      fetchPedidos(1, debouncedSearchTerm);
+      setSearchTerm(''); // Clear search on refresh
+      fetchPedidos(1);
     }
-  }, [asesor, debouncedSearchTerm, fetchPedidos]);
+  }, [asesor, fetchPedidos]);
 
+  // Initial fetch
   useEffect(() => {
     if (asesor) {
-      handleRefresh();
+      fetchPedidos(1);
     }
-  }, [asesor, debouncedSearchTerm, handleRefresh]);
+  }, [asesor, fetchPedidos]); // Only run once when asesor is available
   
+  const getCliente = useCallback((idCliente: string) => {
+    return clients.find(c => c.idCliente === idCliente);
+  }, [clients]);
+
+  const filteredPedidos = useMemo(() => {
+    if (!searchTerm) {
+      return pedidos;
+    }
+    const lowercasedTerm = searchTerm.toLowerCase();
+    return pedidos.filter(pedido => {
+      const cliente = getCliente(pedido.idCliente);
+      return (
+        pedido.idPedido.toLowerCase().includes(lowercasedTerm) ||
+        pedido.Status.toLowerCase().includes(lowercasedTerm) ||
+        (cliente && cliente.Cliente.toLowerCase().includes(lowercasedTerm)) ||
+        (cliente && cliente.Rif.toLowerCase().includes(lowercasedTerm))
+      );
+    });
+  }, [pedidos, searchTerm, getCliente]);
+
+
   const observer = useRef<IntersectionObserver>();
   const lastPedidoElementRef = useCallback(node => {
-      if (isLoading || isFetchingMore) return;
+      if (isLoading || isFetchingMore || searchTerm) return; // Disable infinite scroll when searching
       if (observer.current) observer.current.disconnect();
       observer.current = new IntersectionObserver(entries => {
           if (entries[0].isIntersecting && hasMore) {
-              fetchPedidos(page + 1, debouncedSearchTerm);
+              fetchPedidos(page + 1);
           }
       });
       if (node) observer.current.observe(node);
-  }, [isLoading, isFetchingMore, hasMore, page, debouncedSearchTerm, fetchPedidos]);
+  }, [isLoading, isFetchingMore, hasMore, page, fetchPedidos, searchTerm]);
 
   const updateStatusToEnviado = useCallback(async (pedidoToUpdate: Pedido): Promise<void> => {
     if (!token || !asesor) {
@@ -174,7 +185,8 @@ export default function PedidosPage() {
 
       if (response.ok) {
         toast({ title: 'Estado Actualizado', description: 'El pedido se ha marcado como "Enviado".' });
-        handleRefresh();
+        // Refresh just the specific item in state instead of a full refetch
+        setPedidos(prev => prev.map(p => p.idPedido === pedidoToUpdate.idPedido ? {...p, Status: 'Enviado'} : p));
       } else {
         const errorData = await response.json().catch(() => ({ detail: 'No se pudo cambiar el estado.' }));
         toast({ variant: 'destructive', title: 'Error al actualizar', description: errorData.detail });
@@ -182,7 +194,7 @@ export default function PedidosPage() {
     } catch (error) {
       toast({ variant: "destructive", title: "Error de Conexión", description: "No se pudo comunicar con el servidor." });
     }
-  }, [token, asesor, toast, logout, handleRefresh]);
+  }, [token, asesor, toast, logout]);
 
   useEffect(() => {
     if (sharingPedido && shareComponentRef.current) {
@@ -238,10 +250,6 @@ export default function PedidosPage() {
     }
   }, [sharingPedido, updateStatusToEnviado, toast]);
 
-  const getCliente = useCallback((idCliente: string) => {
-    return clients.find(c => c.idCliente === idCliente);
-  }, [clients]);
-
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value);
   }
@@ -276,7 +284,7 @@ export default function PedidosPage() {
         </div>
       ) : pedidos.length === 0 ? (
         <div className="flex-grow flex flex-col justify-center items-center text-center py-10 border-2 border-dashed rounded-lg">
-          <p className="text-muted-foreground mb-4">{searchTerm ? 'No se encontraron pedidos con ese criterio.' : 'No hay pedidos para mostrar.'}</p>
+          <p className="text-muted-foreground mb-4">No hay pedidos para mostrar.</p>
           <Link href="/pedidos/nuevo" passHref>
               <Button>
                   <PlusCircle className="mr-2 h-4 w-4" />
@@ -284,14 +292,18 @@ export default function PedidosPage() {
               </Button>
           </Link>
         </div>
+      ) : filteredPedidos.length === 0 ? (
+        <div className="flex-grow flex flex-col justify-center items-center text-center py-10">
+          <p className="text-muted-foreground">No se encontraron pedidos con ese criterio.</p>
+        </div>
       ) : (
         <ScrollArea className="flex-grow pr-4 -mr-4">
             <div className="space-y-4 pr-4">
-                {pedidos.map((pedido, index) => {
+                {filteredPedidos.map((pedido, index) => {
                     const cliente = getCliente(pedido.idCliente);
-                    const isLastElement = index === pedidos.length - 1;
+                    const isLastElement = index === filteredPedidos.length - 1;
                     return (
-                        <Card key={pedido.idPedido} ref={isLastElement ? lastPedidoElementRef : null}>
+                        <Card key={pedido.idPedido} ref={isLastElement && !searchTerm ? lastPedidoElementRef : null}>
                            <CardContent className="p-3">
                                <div className="grid grid-cols-[1fr_auto] gap-x-4">
                                    <div className="min-w-0 flex-grow space-y-1 self-center">
