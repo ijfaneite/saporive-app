@@ -199,6 +199,9 @@ export function PedidoForm({ mode, initialPedido, idPedidoGenerado, onSave, isSa
                             {selectedClient && (
                                 <p className="text-xs text-muted-foreground truncate">{selectedClient.Rif}</p>
                             )}
+                            {asesor && (
+                                <p className="text-xs text-muted-foreground truncate">{asesor.Asesor}</p>
+                            )}
                         </div>
 
                         {/* Right side */}
@@ -381,5 +384,3 @@ export function PedidoForm({ mode, initialPedido, idPedidoGenerado, onSave, isSa
         </div>
     )
 }
-
-    
