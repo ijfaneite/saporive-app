@@ -109,7 +109,7 @@ export default function PedidosPage() {
     if (asesor) {
       fetchPedidos(1);
     }
-  }, [asesor]);
+  }, [asesor, fetchPedidos]);
   
   const getCliente = useCallback((idCliente: string) => {
     return clients.find(c => c.idCliente === idCliente);
@@ -311,7 +311,7 @@ export default function PedidosPage() {
         <div className="flex-grow flex justify-center items-center">
             <Loader2 className="w-8 h-8 animate-spin text-primary" />
         </div>
-      ) : pedidos.length === 0 ? (
+      ) : pedidos.length === 0 && !searchTerm ? (
         <div className="flex-grow flex flex-col justify-center items-center text-center py-10 border-2 border-dashed rounded-lg">
           <p className="text-muted-foreground mb-4">No hay pedidos para mostrar.</p>
           <Link href="/pedidos/nuevo" passHref>
