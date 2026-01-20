@@ -56,7 +56,7 @@ export default function PedidosPage() {
     const isInitialLoad = pageNum === 1;
     if (isInitialLoad) {
       setIsLoading(true);
-      setPedidos([]); // Clear previous results for a refresh
+      setPedidos([]);
     } else {
       setIsFetchingMore(true);
     }
@@ -100,17 +100,16 @@ export default function PedidosPage() {
   
   const handleRefresh = useCallback(() => {
     if (asesor) {
-      setSearchTerm(''); // Clear search on refresh
+      setSearchTerm('');
       fetchPedidos(1);
     }
   }, [asesor, fetchPedidos]);
 
-  // Initial fetch
   useEffect(() => {
     if (asesor) {
       fetchPedidos(1);
     }
-  }, [asesor]); // Only depends on asesor
+  }, [asesor]);
   
   const getCliente = useCallback((idCliente: string) => {
     return clients.find(c => c.idCliente === idCliente);
@@ -135,7 +134,7 @@ export default function PedidosPage() {
 
   const observer = useRef<IntersectionObserver>();
   const lastPedidoElementRef = useCallback(node => {
-      if (isLoading || isFetchingMore || searchTerm) return; // Disable infinite scroll when searching
+      if (isLoading || isFetchingMore || searchTerm) return;
       if (observer.current) observer.current.disconnect();
       observer.current = new IntersectionObserver(entries => {
           if (entries[0].isIntersecting && hasMore) {
@@ -145,13 +144,11 @@ export default function PedidosPage() {
       if (node) observer.current.observe(node);
   }, [isLoading, isFetchingMore, hasMore, page, fetchPedidos, searchTerm]);
 
-  const updateStatusToEnviado = useCallback(async (pedidoToUpdate: Pedido): Promise<void> => {
+  const updateStatus = useCallback(async (pedidoToUpdate: Pedido, newStatus: string): Promise<boolean> => {
     if (!token || !asesor) {
         toast({ variant: "destructive", title: "Error de Sincronización", description: "No se pudo actualizar el estado del pedido." });
-        return;
+        return false;
     }
-    
-    if (pedidoToUpdate.Status.toLowerCase() === 'enviado') return;
 
     const detallesParaEnviar: DetallePedidoBase[] = pedidoToUpdate.detalles.map(linea => ({
         idProducto: linea.idProducto,
@@ -164,7 +161,7 @@ export default function PedidosPage() {
       fechaPedido: pedidoToUpdate.fechaPedido,
       totalPedido: pedidoToUpdate.totalPedido,
       idAsesor: pedidoToUpdate.idAsesor,
-      Status: "Enviado",
+      Status: newStatus,
       idCliente: pedidoToUpdate.idCliente,
       idEmpresa: pedidoToUpdate.idEmpresa,
       detalles: detallesParaEnviar,
@@ -180,21 +177,41 @@ export default function PedidosPage() {
       if (response.status === 401) {
         toast({ variant: 'destructive', title: 'Sesión expirada', description: 'Inicie sesión de nuevo.' });
         logout();
-        return;
+        return false;
       }
 
       if (response.ok) {
-        toast({ title: 'Estado Actualizado', description: 'El pedido se ha marcado como "Enviado".' });
-        // Refresh just the specific item in state instead of a full refetch
-        setPedidos(prev => prev.map(p => p.idPedido === pedidoToUpdate.idPedido ? {...p, Status: 'Enviado'} : p));
+        toast({ title: 'Estado Actualizado', description: `El pedido se ha marcado como "${newStatus}".` });
+        setPedidos(prev => prev.map(p => p.idPedido === pedidoToUpdate.idPedido ? {...p, Status: newStatus} : p));
+        return true;
       } else {
         const errorData = await response.json().catch(() => ({ detail: 'No se pudo cambiar el estado.' }));
         toast({ variant: 'destructive', title: 'Error al actualizar', description: errorData.detail });
+        return false;
       }
     } catch (error) {
       toast({ variant: "destructive", title: "Error de Conexión", description: "No se pudo comunicar con el servidor." });
+      return false;
     }
   }, [token, asesor, toast, logout]);
+  
+  const updateStatusToEnviado = useCallback(async (pedidoToUpdate: Pedido): Promise<void> => {
+    if (pedidoToUpdate.Status.toLowerCase() !== 'enviado') {
+        await updateStatus(pedidoToUpdate, 'Enviado');
+    }
+  }, [updateStatus]);
+
+  const handlePrint = useCallback(async (pedidoToPrint: Pedido) => {
+    const currentStatus = pedidoToPrint.Status.toLowerCase();
+    if (currentStatus !== 'impreso' && currentStatus !== 'enviado') {
+        const success = await updateStatus(pedidoToPrint, 'Impreso');
+        if (success) {
+            window.open(`/pedidos/${pedidoToPrint.idPedido}/imprimir`, '_blank');
+        }
+    } else {
+        window.open(`/pedidos/${pedidoToPrint.idPedido}/imprimir`, '_blank');
+    }
+  }, [updateStatus]);
 
   useEffect(() => {
     if (sharingPedido && shareComponentRef.current) {
@@ -365,7 +382,7 @@ export default function PedidosPage() {
                                                 <Pencil className="mr-2 h-4 w-4" />
                                                 <span>Editar</span>
                                             </DropdownMenuItem>
-                                            <DropdownMenuItem onSelect={() => window.open(`/pedidos/${pedido.idPedido}/imprimir`, '_blank')}>
+                                            <DropdownMenuItem onSelect={() => handlePrint(pedido)}>
                                                 <Printer className="mr-2 h-4 w-4" />
                                                 <span>Imprimir</span>
                                             </DropdownMenuItem>

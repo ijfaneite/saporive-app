@@ -4,7 +4,7 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import Image from 'next/image';
 import { useParams } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
-import { Pedido, Producto, Cliente, PedidoCreatePayload, DetallePedidoBase } from '@/lib/types';
+import { Pedido, Producto, Cliente } from '@/lib/types';
 import { API_BASE_URL, API_ROUTES } from '@/lib/config';
 import { Loader2 } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
@@ -22,79 +22,6 @@ export default function ImprimirPedidoPage() {
   const [isLoading, setIsLoading] = useState(true);
 
   const orderId = params.id as string;
-
-  const updateStatusToImpreso = useCallback(async (): Promise<boolean> => {
-    if (!token || !pedido || !asesor || !selectedEmpresa) {
-        toast({
-            variant: "destructive",
-            title: "Error de Sincronización",
-            description: "No se pudo actualizar el estado del pedido.",
-        });
-        return false;
-    }
-
-    const currentStatus = pedido.Status.toLowerCase();
-    if (currentStatus === 'impreso' || currentStatus === 'enviado') {
-      return true; // Already processed, no need to update
-    }
-
-    const detallesParaEnviar: DetallePedidoBase[] = pedido.detalles.map(linea => ({
-        idProducto: linea.idProducto,
-        Precio: linea.Precio,
-        Cantidad: linea.Cantidad,
-    }));
-
-    const pedidoPayload: PedidoCreatePayload = {
-      idPedido: pedido.idPedido,
-      fechaPedido: pedido.fechaPedido,
-      totalPedido: pedido.totalPedido,
-      idAsesor: pedido.idAsesor,
-      Status: "Impreso",
-      idCliente: pedido.idCliente,
-      idEmpresa: pedido.idEmpresa,
-      detalles: detallesParaEnviar,
-    };
-
-    try {
-      const response = await fetch(`${API_BASE_URL}${API_ROUTES.pedidos}${pedido.idPedido}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(pedidoPayload),
-      });
-
-      if (response.status === 401) {
-        toast({ variant: 'destructive', title: 'Sesión expirada', description: 'Inicie sesión de nuevo.' });
-        logout();
-        return false;
-      }
-
-      if (response.ok) {
-         toast({
-            title: 'Estado Actualizado',
-            description: 'El pedido se ha marcado como "Impreso".'
-        });
-        return true;
-      } else {
-        const errorData = await response.json().catch(() => ({ detail: 'No se pudo cambiar el estado del pedido a "Impreso".' }));
-        toast({
-            variant: 'destructive',
-            title: 'Error al actualizar',
-            description: errorData.detail || 'No se pudo cambiar el estado del pedido a "Impreso".'
-        });
-        return false;
-      }
-    } catch (error) {
-      toast({
-        variant: "destructive",
-        title: "Error de Conexión",
-        description: "No se pudo comunicar con el servidor para actualizar el estado.",
-      });
-      return false;
-    }
-  }, [pedido, token, asesor, selectedEmpresa, toast, logout]);
 
   useEffect(() => {
     if (isAuthLoading || !orderId || !token) return;
@@ -138,22 +65,22 @@ export default function ImprimirPedidoPage() {
 
     document.title = `Pedido-${pedido.idPedido}`;
 
-    const handleAfterPrint = async () => {
-      const currentStatus = pedido.Status.toLowerCase();
-      if (currentStatus !== 'enviado' && currentStatus !== 'impreso') {
-        await updateStatusToImpreso();
-      }
+    const handleAfterPrint = () => {
       window.close();
     };
 
     window.addEventListener('afterprint', handleAfterPrint);
     
-    window.print();
+    // Use a small timeout to allow content to render before print dialog
+    const timer = setTimeout(() => {
+      window.print();
+    }, 200);
 
     return () => {
+      clearTimeout(timer);
       window.removeEventListener('afterprint', handleAfterPrint);
     };
-  }, [isAuthLoading, isLoading, pedido, updateStatusToImpreso]);
+  }, [isAuthLoading, isLoading, pedido]);
 
   const cliente = useMemo(() => {
     if (!pedido) return null;
