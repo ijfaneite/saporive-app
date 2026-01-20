@@ -372,12 +372,8 @@ export default function PedidosPage() {
                                                 <span>Consultar</span>
                                             </DropdownMenuItem>
                                             <DropdownMenuItem
-                                                disabled={pedido.Status.toLowerCase() === 'enviado'}
-                                                onSelect={() => {
-                                                    if (pedido.Status.toLowerCase() !== 'enviado') {
-                                                        router.push(`/pedidos/${pedido.idPedido}`);
-                                                    }
-                                                }}
+                                                disabled={['enviado', 'impreso'].includes(pedido.Status.toLowerCase())}
+                                                onSelect={() => router.push(`/pedidos/${pedido.idPedido}`)}
                                             >
                                                 <Pencil className="mr-2 h-4 w-4" />
                                                 <span>Editar</span>
