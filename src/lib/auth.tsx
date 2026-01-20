@@ -397,10 +397,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const storedEmpresa = getEncryptedItem<Empresa>('empresa');
     if (storedEmpresa) {
       setSelectedEmpresaState(storedEmpresa);
-      router.push('/pedidos');
-    } else {
-      router.push('/configuracion');
     }
+    router.push('/pedidos');
   };
   
   const setEmpresa = (empresa: Empresa) => {
