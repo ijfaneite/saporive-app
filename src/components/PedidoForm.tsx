@@ -32,7 +32,7 @@ interface PedidoFormProps {
 }
 
 export function PedidoForm({ mode, initialPedido, idPedidoGenerado, onSave, isSaving }: PedidoFormProps) {
-    const { clients, products, selectedEmpresa, asesor } = useAuth();
+    const { clients, products, selectedEmpresa, asesor: loggedInAsesor, asesores } = useAuth();
     const { toast } = useToast();
 
     const isViewMode = mode === 'consultar';
@@ -64,14 +64,14 @@ export function PedidoForm({ mode, initialPedido, idPedidoGenerado, onSave, isSa
     const [clientSearch, setClientSearch] = useState("");
 
     const filteredClients = useMemo(() => {
-        if (!asesor) return [];
-        const allAsesorClients = clients.filter(c => c.idAsesor === asesor.idAsesor);
+        if (!loggedInAsesor) return [];
+        const allAsesorClients = clients.filter(c => c.idAsesor === loggedInAsesor.idAsesor);
         if (!clientSearch) return allAsesorClients;
         return allAsesorClients.filter(c => 
             c.Cliente.toLowerCase().includes(clientSearch.toLowerCase()) || 
             c.Rif.toLowerCase().includes(clientSearch.toLowerCase())
         );
-    }, [clients, asesor, clientSearch]);
+    }, [clients, loggedInAsesor, clientSearch]);
 
     // Product Combobox states
     const [productPopoverOpen, setProductPopoverOpen] = useState(false);
@@ -143,7 +143,7 @@ export function PedidoForm({ mode, initialPedido, idPedidoGenerado, onSave, isSa
           toast({ variant: "destructive", title: "Pedido inválido", description: "Agregue productos y asegúrese de que las cantidades no sean cero." });
           return;
         }
-        if (!asesor || !selectedEmpresa) {
+        if (!loggedInAsesor || !selectedEmpresa) {
             toast({ variant: "destructive", title: "Error de configuración", description: "No se ha seleccionado un asesor o una empresa." });
             return;
         }
@@ -158,7 +158,7 @@ export function PedidoForm({ mode, initialPedido, idPedidoGenerado, onSave, isSa
           idPedido: mode === 'nuevo' ? idPedidoGenerado! : initialPedido!.idPedido,
           fechaPedido: new Date().toISOString(),
           totalPedido: totalPedido,
-          idAsesor: asesor.idAsesor,
+          idAsesor: mode === 'nuevo' ? loggedInAsesor.idAsesor : initialPedido!.idAsesor,
           Status: mode === 'nuevo' ? "Pendiente" : "Modificado",
           idCliente: selectedClientId,
           idEmpresa: selectedEmpresa.idEmpresa,
@@ -172,6 +172,13 @@ export function PedidoForm({ mode, initialPedido, idPedidoGenerado, onSave, isSa
         if (!selectedClientId) return null;
         return clients.find(c => c.idCliente === selectedClientId) ?? null;
       }, [selectedClientId, clients]);
+    
+    const pedidoAsesor = useMemo(() => {
+        if (mode !== 'nuevo' && initialPedido) {
+            return asesores.find(a => a.idAsesor === initialPedido.idAsesor);
+        }
+        return loggedInAsesor;
+    }, [mode, initialPedido, asesores, loggedInAsesor]);
 
     const fechaDelPedido = useMemo(() => {
         return initialPedido ? new Date(initialPedido.fechaPedido) : new Date();
@@ -199,8 +206,8 @@ export function PedidoForm({ mode, initialPedido, idPedidoGenerado, onSave, isSa
                             {selectedClient && (
                                 <p className="text-xs text-muted-foreground truncate">{selectedClient.Rif}</p>
                             )}
-                            {asesor && (
-                                <p className="text-xs text-muted-foreground truncate">{asesor.Asesor}</p>
+                            {pedidoAsesor && (
+                                <p className="text-xs text-muted-foreground truncate">{pedidoAsesor.Asesor}</p>
                             )}
                         </div>
 
