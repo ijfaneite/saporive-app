@@ -23,6 +23,7 @@ import {
     AlertDialogTrigger,
   } from "@/components/ui/alert-dialog"
 import { cn } from "@/lib/utils";
+import { ThemeSwitcher } from "@/components/ThemeSwitcher";
 
 export default function ConfiguracionPage() {
   const { logout, syncData, isSyncing } = useAuth();
@@ -43,6 +44,16 @@ export default function ConfiguracionPage() {
   return (
     <div className="p-4 space-y-6">
       <h1 className="text-3xl font-bold font-headline text-primary">Configuración</h1>
+
+      <Card>
+        <CardHeader>
+            <CardTitle>Tema de la Aplicación</CardTitle>
+            <CardDescription>Seleccione su tema visual preferido.</CardDescription>
+        </CardHeader>
+        <CardContent>
+            <ThemeSwitcher />
+        </CardContent>
+      </Card>
       
       <Card>
         <CardHeader>

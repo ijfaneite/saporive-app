@@ -1,6 +1,7 @@
 import type {Metadata} from 'next';
 import {AuthProvider} from '@/lib/auth';
 import {Toaster} from '@/components/ui/toaster';
+import { ThemeProvider } from "@/components/theme-provider";
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -28,10 +29,17 @@ export default function RootLayout({
         />
       </head>
       <body className="font-body antialiased">
-        <AuthProvider>
-          {children}
-          <Toaster />
-        </AuthProvider>
+        <ThemeProvider
+            attribute="class"
+            defaultTheme="system"
+            enableSystem
+            disableTransitionOnChange
+        >
+            <AuthProvider>
+              {children}
+              <Toaster />
+            </AuthProvider>
+        </ThemeProvider>
       </body>
     </html>
   );
