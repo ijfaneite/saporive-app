@@ -13,18 +13,14 @@ import {
 import { Loader2, X } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { filterProductosByTerm } from '@/lib/filter-config';
 
 export default function PreciosPage() {
   const { products, isLoading: isAuthLoading } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
 
   const filteredProductos = useMemo(() => {
-    if (!searchTerm) return products;
-    const lowercasedTerm = searchTerm.toLowerCase();
-    return products.filter(producto =>
-        producto.Producto.toLowerCase().includes(lowercasedTerm) ||
-        producto.idProducto.toLowerCase().includes(lowercasedTerm)
-    );
+    return filterProductosByTerm(products, searchTerm);
   }, [searchTerm, products]);
   
   const formatCurrency = (value: number) => {

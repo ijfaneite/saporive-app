@@ -27,6 +27,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { filterPedidosByTerm } from '@/lib/filter-config';
 
 
 export default function PedidosPage() {
@@ -116,19 +117,7 @@ export default function PedidosPage() {
   }, [clients]);
 
   const filteredPedidos = useMemo(() => {
-    if (!searchTerm) {
-      return pedidos;
-    }
-    const lowercasedTerm = searchTerm.toLowerCase();
-    return pedidos.filter(pedido => {
-      const cliente = getCliente(pedido.idCliente);
-      return (
-        pedido.idPedido.toLowerCase().includes(lowercasedTerm) ||
-        pedido.Status.toLowerCase().includes(lowercasedTerm) ||
-        (cliente && cliente.Cliente.toLowerCase().includes(lowercasedTerm)) ||
-        (cliente && cliente.Rif.toLowerCase().includes(lowercasedTerm))
-      );
-    });
+    return filterPedidosByTerm(pedidos, searchTerm, getCliente);
   }, [pedidos, searchTerm, getCliente]);
 
 
