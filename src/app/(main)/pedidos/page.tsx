@@ -110,7 +110,7 @@ export default function PedidosPage() {
     if (asesor) {
       fetchPedidos(1);
     }
-  }, [asesor, fetchPedidos]); // Only run once when asesor is available
+  }, [asesor]); // Only depends on asesor
   
   const getCliente = useCallback((idCliente: string) => {
     return clients.find(c => c.idCliente === idCliente);
@@ -273,7 +273,7 @@ export default function PedidosPage() {
 
       <div className="relative flex-shrink-0">
         <Input 
-          placeholder="Buscar por... Pedido, Estatus, Cliente, Rif"
+          placeholder="Escriba aqui para buscar"
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           className="pr-10"
@@ -354,18 +354,6 @@ export default function PedidosPage() {
                                                 <Eye className="mr-2 h-4 w-4" />
                                                 <span>Consultar</span>
                                             </DropdownMenuItem>
-                                            <DropdownMenuItem onSelect={() => setSharingPedido(pedido)} disabled={isSharing}>
-                                                {isSharing && sharingPedido?.idPedido === pedido.idPedido ? (
-                                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                                ) : (
-                                                    <Share2 className="mr-2 h-4 w-4" />
-                                                )}
-                                                <span>Compartir</span>
-                                            </DropdownMenuItem>
-                                            <DropdownMenuItem onSelect={() => window.open(`/pedidos/${pedido.idPedido}/imprimir`, '_blank')}>
-                                                <Printer className="mr-2 h-4 w-4" />
-                                                <span>Imprimir</span>
-                                            </DropdownMenuItem>
                                             <DropdownMenuItem
                                                 disabled={pedido.Status.toLowerCase() === 'enviado'}
                                                 onSelect={() => {
@@ -376,6 +364,18 @@ export default function PedidosPage() {
                                             >
                                                 <Pencil className="mr-2 h-4 w-4" />
                                                 <span>Editar</span>
+                                            </DropdownMenuItem>
+                                            <DropdownMenuItem onSelect={() => window.open(`/pedidos/${pedido.idPedido}/imprimir`, '_blank')}>
+                                                <Printer className="mr-2 h-4 w-4" />
+                                                <span>Imprimir</span>
+                                            </DropdownMenuItem>
+                                            <DropdownMenuItem onSelect={() => setSharingPedido(pedido)} disabled={isSharing}>
+                                                {isSharing && sharingPedido?.idPedido === pedido.idPedido ? (
+                                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                                ) : (
+                                                    <Share2 className="mr-2 h-4 w-4" />
+                                                )}
+                                                <span>Compartir</span>
                                             </DropdownMenuItem>
                                         </DropdownMenuContent>
                                     </DropdownMenu>
