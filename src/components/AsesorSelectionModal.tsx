@@ -14,31 +14,49 @@ import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from 'lucide-react';
 
 export function AsesorSelectionModal() {
-  const { setAsesor, asesores, isSyncing, setEmpresa, empresas } = useAuth();
+  const { setAsesor, asesores, isSyncing, setEmpresa, empresas, user } = useAuth();
   const { toast } = useToast();
   
   const [selectedAsesorId, setSelectedAsesorId] = useState<string | undefined>();
   const [selectedEmpresaId, setSelectedEmpresaId] = useState<string | undefined>();
 
-  const canContinue = selectedAsesorId && selectedEmpresaId;
+  const isAdmin = user?.idRol === 'admin';
+  const canContinue = selectedEmpresaId && (isAdmin ? selectedAsesorId : true);
 
   const handleContinue = () => {
-    const selectedAdv = asesores.find(a => a.idAsesor === selectedAsesorId);
     const selectedComp = empresas.find(e => e.idEmpresa.toString() === selectedEmpresaId);
 
-    if (selectedAdv && selectedComp) {
-      setEmpresa(selectedComp);
-      setAsesor(selectedAdv);
-      toast({
-        title: "Configuración guardada",
-        description: `Trabajando con ${selectedComp.RazonSocial} como ${selectedAdv.Asesor}.`,
-      });
-    } else {
+    if (!selectedComp) {
         toast({
             variant: "destructive",
             title: "Error",
-            description: "Por favor, seleccione una empresa y un asesor válidos.",
+            description: "Por favor, seleccione una empresa válida.",
         });
+        return;
+    }
+
+    setEmpresa(selectedComp);
+
+    if (isAdmin) {
+        const selectedAdv = asesores.find(a => a.idAsesor === selectedAsesorId);
+        if (selectedAdv) {
+          setAsesor(selectedAdv);
+          toast({
+            title: "Configuración guardada",
+            description: `Trabajando con ${selectedComp.RazonSocial} como ${selectedAdv.Asesor}.`,
+          });
+        } else {
+            toast({
+                variant: "destructive",
+                title: "Error",
+                description: "Por favor, seleccione un asesor válido.",
+            });
+        }
+    } else {
+        toast({
+            title: "Configuración guardada",
+            description: `Trabajando con ${selectedComp.RazonSocial}.`,
+          });
     }
   };
 
@@ -72,21 +90,23 @@ export function AsesorSelectionModal() {
               </Select>
             </div>
             
-            <div>
-              <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 mb-2 block">Asesor de Ventas</label>
-              <Select onValueChange={setSelectedAsesorId} defaultValue={selectedAsesorId}>
-                  <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Seleccione un asesor..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                      {asesores.map((asesor) => (
-                      <SelectItem key={asesor.idAsesor} value={asesor.idAsesor}>
-                          {asesor.Asesor}
-                      </SelectItem>
-                      ))}
-                  </SelectContent>
-              </Select>
-            </div>
+            {isAdmin && (
+              <div>
+                <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 mb-2 block">Asesor de Ventas</label>
+                <Select onValueChange={setSelectedAsesorId} defaultValue={selectedAsesorId}>
+                    <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Seleccione un asesor..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                        {asesores.map((asesor) => (
+                        <SelectItem key={asesor.idAsesor} value={asesor.idAsesor}>
+                            {asesor.Asesor}
+                        </SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
+              </div>
+            )}
           </div>
         )}
 

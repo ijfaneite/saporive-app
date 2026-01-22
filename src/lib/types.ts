@@ -3,6 +3,7 @@ export interface User {
   username: string;
   createdAt: string; // ISO-8601 string
   updatedAt: string; // ISO-8601 string
+  idRol: string;
 }
 
 export interface Token {

@@ -138,10 +138,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     eraseCookie('auth_token');
     localStorage.removeItem('user');
+    localStorage.removeItem('asesor');
     localStorage.removeItem('asesores');
     localStorage.removeItem('clients');
     localStorage.removeItem('products');
     localStorage.removeItem('empresas');
+    localStorage.removeItem('empresa');
 
     router.push('/login');
   }, [router]);
@@ -184,12 +186,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, [token, toast, logout]);
 
 
-  const setAsesor = (asesor: Asesor) => {
+  const setAsesor = useCallback((asesor: Asesor) => {
     setAsesorState(asesor);
     setEncryptedItem('asesor', asesor);
     // When an advisor is set, fetch their specific clients.
     fetchClientsForAsesor(asesor.idAsesor);
-  };
+  }, [fetchClientsForAsesor]);
 
   useEffect(() => {
     try {
@@ -242,6 +244,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setIsLoading(false);
     }
   }, [fetchClientsForAsesor]);
+
+  useEffect(() => {
+    if (user && user.idRol !== 'admin' && asesores.length > 0 && !asesor) {
+        const match = asesores.find(a => a.idAsesor.toLowerCase() === user.username.toLowerCase());
+        if (match) {
+            setAsesor(match);
+        }
+    }
+  }, [user, asesores, asesor, setAsesor]);
 
   const syncData = useCallback(async (tokenOverride?: string) => {
     const currentToken = tokenOverride || token;
