@@ -26,7 +26,12 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
     );
   }
 
-  const showSetupModal = user && (!selectedEmpresa || !asesor);
+  // Explicitly check role for modal visibility
+  const showSetupModal = user && (
+    (user.idRol === 'admin' && (!selectedEmpresa || !asesor)) ||
+    (user.idRol !== 'admin' && !selectedEmpresa)
+  );
+
 
   return (
     <div className="bg-gray-200 dark:bg-gray-900 min-h-screen flex items-center justify-center font-body">

@@ -38,6 +38,14 @@ export function AsesorSelectionModal() {
     setEmpresa(selectedComp);
 
     if (isAdmin) {
+        if (!selectedAsesorId) {
+            toast({
+               variant: "destructive",
+               title: "Selección requerida",
+               description: "Por favor, seleccione un asesor para continuar.",
+           });
+           return;
+       }
         const selectedAdv = asesores.find(a => a.idAsesor === selectedAsesorId);
         if (selectedAdv) {
           setAsesor(selectedAdv);
