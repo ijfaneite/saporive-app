@@ -444,7 +444,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   return (
     <AuthContext.Provider value={{ user, token, asesor, asesores, clients, products, empresas, selectedEmpresa, localPedidos, login, logout, setAsesor, setEmpresa, updateEmpresaInState, syncData, addLocalPedido, isLoading, isSyncing, isSyncingLocal }}>
       {children}
-    </Auth-Provider>
+    </AuthContext.Provider>
   );
 };
 
