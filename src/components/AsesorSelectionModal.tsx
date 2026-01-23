@@ -21,17 +21,19 @@ export function AsesorSelectionModal() {
   const [selectedEmpresaId, setSelectedEmpresaId] = useState<string | undefined>();
 
   const isAdmin = user?.idRol === 'admin';
-  const canContinue = selectedEmpresaId && (isAdmin ? selectedAsesorId : true);
+
+  // For admin, both must be selected. For regular user, only empresa is needed from the modal.
+  const canContinue = isAdmin ? (selectedEmpresaId && selectedAsesorId) : selectedEmpresaId;
 
   const handleContinue = () => {
+    if (!selectedEmpresaId) {
+        toast({ variant: "destructive", title: "Error", description: "Por favor, seleccione una empresa." });
+        return;
+    }
+    
     const selectedComp = empresas.find(e => e.idEmpresa.toString() === selectedEmpresaId);
-
     if (!selectedComp) {
-        toast({
-            variant: "destructive",
-            title: "Error",
-            description: "Por favor, seleccione una empresa válida.",
-        });
+        toast({ variant: "destructive", title: "Error", description: "La empresa seleccionada no es válida." });
         return;
     }
 
@@ -39,13 +41,9 @@ export function AsesorSelectionModal() {
 
     if (isAdmin) {
         if (!selectedAsesorId) {
-            toast({
-               variant: "destructive",
-               title: "Selección requerida",
-               description: "Por favor, seleccione un asesor para continuar.",
-           });
-           return;
-       }
+            toast({ variant: "destructive", title: "Selección requerida", description: "Como administrador, debe seleccionar un asesor." });
+            return;
+        }
         const selectedAdv = asesores.find(a => a.idAsesor === selectedAsesorId);
         if (selectedAdv) {
           setAsesor(selectedAdv);
@@ -54,17 +52,15 @@ export function AsesorSelectionModal() {
             description: `Trabajando con ${selectedComp.RazonSocial} como ${selectedAdv.Asesor}.`,
           });
         } else {
-            toast({
-                variant: "destructive",
-                title: "Error",
-                description: "Por favor, seleccione un asesor válido.",
-            });
+            toast({ variant: "destructive", title: "Error", description: "El asesor seleccionado no es válido." });
         }
     } else {
+        // For non-admin, the advisor is set automatically by the AuthProvider.
+        // We just needed to set the company here.
         toast({
             title: "Configuración guardada",
             description: `Trabajando con ${selectedComp.RazonSocial}.`,
-          });
+        });
     }
   };
 
@@ -73,7 +69,7 @@ export function AsesorSelectionModal() {
       <div className="bg-card p-6 rounded-lg shadow-xl w-full max-w-sm space-y-6">
         <div className="text-center">
             <h2 className="text-2xl font-bold font-headline text-primary">Configuración Inicial</h2>
-            <p className="text-muted-foreground">Por favor, seleccione su empresa y asesor para comenzar.</p>
+            <p className="text-muted-foreground">Por favor, seleccione los datos para comenzar.</p>
         </div>
 
         {isSyncing ? (
@@ -100,20 +96,20 @@ export function AsesorSelectionModal() {
             
             {isAdmin && (
               <div>
-                <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 mb-2 block">Asesor de Ventas</label>
-                <Select onValueChange={setSelectedAsesorId} defaultValue={selectedAsesorId}>
-                    <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Seleccione un asesor..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                        {asesores.map((asesor) => (
-                        <SelectItem key={asesor.idAsesor} value={asesor.idAsesor}>
-                            {asesor.Asesor}
-                        </SelectItem>
-                        ))}
-                    </SelectContent>
-                </Select>
-              </div>
+                  <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 mb-2 block">Asesor de Ventas</label>
+                  <Select onValueChange={setSelectedAsesorId} defaultValue={selectedAsesorId}>
+                      <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Seleccione un asesor..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                          {asesores.map((asesor) => (
+                          <SelectItem key={asesor.idAsesor} value={asesor.idAsesor}>
+                              {asesor.Asesor}
+                          </SelectItem>
+                          ))}
+                      </SelectContent>
+                  </Select>
+                </div>
             )}
           </div>
         )}
