@@ -135,6 +135,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setClients([]);
     setProducts([]);
     setEmpresas([]);
+    setAsesorState(null);
+    setSelectedEmpresaState(null);
 
     eraseCookie('auth_token');
     localStorage.removeItem('user');
@@ -199,7 +201,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (storedToken) {
         setToken(storedToken);
         const storedUser = getEncryptedItem<User>('user');
-        if (storedUser) setUser(storedUser);
+        if (storedUser) {
+            setUser(storedUser);
+        } else {
+            // If user is not in localStorage, the session is inconsistent.
+            logout();
+            return;
+        }
         
         const storedAsesores = getEncryptedItem<Asesor[]>('asesores');
         if (storedAsesores) {
@@ -243,7 +251,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     } finally {
       setIsLoading(false);
     }
-  }, [fetchClientsForAsesor]);
+  }, [logout, fetchClientsForAsesor]);
 
   useEffect(() => {
     if (user && user.idRol !== 'admin' && asesores.length > 0 && !asesor) {
@@ -384,6 +392,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
 
     if (userResponse.status === 401) {
+        toast({
+            variant: "destructive",
+            title: "Sesión Expirada",
+            description: "Su sesión ha caducado. Por favor inicie sesión de nuevo.",
+        });
         logout();
         throw new Error("Token de autenticación inválido.");
     }
@@ -398,6 +411,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         } catch (e) {
             // El cuerpo no era JSON o algo más salió mal.
         }
+        logout();
         throw new Error(errorMessage);
     }
 
