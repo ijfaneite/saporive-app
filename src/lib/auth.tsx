@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
+import { db } from './db';
 import { User, Asesor, Token, Cliente, Producto, Empresa, Pedido, PedidoCreatePayload, DetallePedido } from '@/lib/types';
 import { API_BASE_URL, API_ROUTES } from '@/lib/config';
 import { useToast } from '@/hooks/use-toast';
@@ -198,14 +199,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const addLocalPedido = useCallback(async (
     pedidoPayload: Omit<PedidoCreatePayload, 'idPedido' | 'fechaPedido' | 'Status'>
   ) => {
-    const currentLocalPedidos = getEncryptedItem<Pedido[]>('localPedidos') || [];
-    
-    const localIdCounters = currentLocalPedidos
-      .map(p => parseInt(p.idPedido.split('-')[1] || '0'))
-      .filter(n => !isNaN(n));
-    const nextId = (localIdCounters.length > 0 ? Math.max(...localIdCounters) : 0) + 1;
-    const tempId = `99999999-${String(nextId).padStart(3, '0')}`;
+    const lastLocalPedido = await db.localPedidos.orderBy('idPedido').last();
+    let nextIdNum = 1;
+    if (lastLocalPedido) {
+        try {
+            const lastIdNum = parseInt(lastLocalPedido.idPedido.split('-')[1]);
+            if (!isNaN(lastIdNum)) {
+                nextIdNum = lastIdNum + 1;
+            }
+        } catch (e) {
+            // Failsafe, ignore parsing error
+        }
+    }
 
+    const tempId = `99999999-${String(nextIdNum).padStart(3, '0')}`;
     const now = new Date();
 
     const detallesConTotal: DetallePedido[] = pedidoPayload.detalles.map((d, index) => ({
@@ -231,10 +238,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       updatedBy: user?.username || 'local',
       isLocal: true,
     };
-
-    const updatedLocalPedidos = [...currentLocalPedidos, newLocalPedido];
-    setLocalPedidos(updatedLocalPedidos);
-    setEncryptedItem('localPedidos', updatedLocalPedidos);
+    
+    await db.localPedidos.add(newLocalPedido);
+    const allLocalPedidos = await db.localPedidos.orderBy('createdAt').reverse().toArray();
+    setLocalPedidos(allLocalPedidos);
 
     toast({
         title: "Pedido Guardado Localmente",
@@ -244,7 +251,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, [user, toast]);
 
     const syncLocalPedidos = useCallback(async () => {
-        const pedidosToSync = getEncryptedItem<Pedido[]>('localPedidos') || [];
+        const pedidosToSync = await db.localPedidos.toArray();
         if (pedidosToSync.length === 0 || !isOnline || !token || !selectedEmpresa) {
             return;
         }
@@ -253,7 +260,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         toast({ title: 'Sincronizando pedidos locales...' });
         
         let currentEmpresa = selectedEmpresa;
-        let failedSyncs: Pedido[] = [];
+        const syncedIds: string[] = [];
         let successCount = 0;
     
         for (const localPedido of pedidosToSync) {
@@ -302,10 +309,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 updateEmpresaInState(updatedEmpresa);
     
                 successCount++;
+                syncedIds.push(localPedido.idPedido);
     
             } catch (error) {
                 console.error(`Failed to sync order ${localPedido.idPedido}:`, error);
-                failedSyncs.push(localPedido);
                  if (error instanceof Error && error.message === "401") {
                     toast({ variant: "destructive", title: "Sesión expirada" });
                     logout();
@@ -314,9 +321,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 }
             }
         }
+
+        if (syncedIds.length > 0) {
+            await db.localPedidos.bulkDelete(syncedIds);
+        }
     
-        setLocalPedidos(failedSyncs);
-        setEncryptedItem('localPedidos', failedSyncs);
+        const remainingLocalPedidos = await db.localPedidos.toArray();
+        setLocalPedidos(remainingLocalPedidos);
     
         setIsSyncingLocal(false);
         if (successCount > 0) {
@@ -325,7 +336,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 description: `${successCount} pedido(s) local(es) se han sincronizado.`,
             });
             await syncData();
-        } else if (pedidosToSync.length > 0) {
+        } else if (pedidosToSync.length > 0 && successCount === 0) {
             toast({
                 variant: "destructive",
                 title: "Fallo en la Sincronización",
@@ -344,7 +355,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setToken(cachedToken);
         setAsesorState(getEncryptedItem<Asesor>('asesor'));
         setSelectedEmpresaState(getEncryptedItem<Empresa>('empresa'));
-        setLocalPedidos(getEncryptedItem<Pedido[]>('localPedidos') || []);
+        
+        const localPedidosFromDb = await db.localPedidos.orderBy('createdAt').reverse().toArray();
+        setLocalPedidos(localPedidosFromDb);
         
         const cachedProducts = getEncryptedItem<Producto[]>('products');
         if (cachedProducts && cachedProducts.length > 0) {
@@ -365,13 +378,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, [token]);
 
   useEffect(() => {
-    if (isOnline && (getEncryptedItem<Pedido[]>('localPedidos') || []).length > 0) {
-        syncLocalPedidos();
+    const checkAndSync = async () => {
+        if (isOnline) {
+            const count = await db.localPedidos.count();
+            if (count > 0) {
+                syncLocalPedidos();
+            }
+        }
     }
+    checkAndSync();
   }, [isOnline, syncLocalPedidos]);
 
 
   const login = async (username: string, password: string) => {
+    localStorage.removeItem('asesor');
+    localStorage.removeItem('empresa');
+
     let response;
     try {
         response = await fetch(`${API_BASE_URL}${API_ROUTES.token}`, {
@@ -398,8 +420,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setEncryptedItem('user', userData);
     setUser(userData);
     setToken(access_token);
-    setAsesorState(null);
-    setSelectedEmpresaState(null);
     router.push('/pedidos');
   };
 
@@ -424,7 +444,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   return (
     <AuthContext.Provider value={{ user, token, asesor, asesores, clients, products, empresas, selectedEmpresa, localPedidos, login, logout, setAsesor, setEmpresa, updateEmpresaInState, syncData, addLocalPedido, isLoading, isSyncing, isSyncingLocal }}>
       {children}
-    </AuthContext.Provider>
+    </Auth-Provider>
   );
 };
 
