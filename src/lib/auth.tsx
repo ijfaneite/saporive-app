@@ -361,6 +361,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
 
     const { access_token } = await response.json();
+    
+    // Clear old user-specific data before proceeding with the new login.
+    localStorage.removeItem('asesor');
+    localStorage.removeItem('empresa');
+    setAsesorState(null);
+    setSelectedEmpresaState(null);
+    
     setToken(access_token);
     setCookie('auth_token', access_token, 7);
     
@@ -400,15 +407,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     await syncData(access_token);
 
-    const storedAsesor = getEncryptedItem<Asesor>('asesor');
-    if (storedAsesor) {
-        setAsesorState(storedAsesor);
-    }
-
-    const storedEmpresa = getEncryptedItem<Empresa>('empresa');
-    if (storedEmpresa) {
-      setSelectedEmpresaState(storedEmpresa);
-    }
     router.push('/pedidos');
   };
   
