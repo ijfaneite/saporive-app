@@ -120,7 +120,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setProducts([]);
     setEmpresas([]);
     eraseCookie('auth_token');
-    if (typeof localStorage !== 'undefined') localStorage.clear();
     router.push('/login');
   }, [router]);
   
@@ -229,7 +228,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     if (!userResponse.ok) { logout(); throw new Error('No se pudieron obtener los datos del usuario.'); }
     
     const userData: User = await userResponse.json();
-    if (typeof localStorage !== 'undefined') localStorage.clear();
     setCookie('auth_token', access_token, 7);
     setEncryptedItem('user', userData);
     setUser(userData);
