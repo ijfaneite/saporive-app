@@ -140,12 +140,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     eraseCookie('auth_token');
     localStorage.removeItem('user');
-    localStorage.removeItem('asesor');
     localStorage.removeItem('asesores');
     localStorage.removeItem('clients');
     localStorage.removeItem('products');
     localStorage.removeItem('empresas');
-    localStorage.removeItem('empresa');
 
     router.push('/login');
   }, [router]);
@@ -369,12 +367,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
 
     const { access_token } = await response.json();
-    
-    // Clear old user-specific data before proceeding with the new login.
-    localStorage.removeItem('asesor');
-    localStorage.removeItem('empresa');
-    setAsesorState(null);
-    setSelectedEmpresaState(null);
     
     setToken(access_token);
     setCookie('auth_token', access_token, 7);
