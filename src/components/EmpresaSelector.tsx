@@ -2,7 +2,6 @@
 
 import React, { useState } from 'react';
 import { useAuth } from '@/lib/auth';
-import { Empresa } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import {
   Select,
@@ -13,26 +12,19 @@ import {
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 
-interface EmpresaSelectorProps {
-    onEmpresaSelected?: () => void;
-}
-
-export function EmpresaSelector({ onEmpresaSelected }: EmpresaSelectorProps) {
+export function EmpresaSelector() {
   const { empresas, setEmpresa, selectedEmpresa } = useAuth();
-  const [selectedEmpresaId, setSelectedEmpresaId] = useState<string | undefined>(selectedEmpresa?.idEmpresa);
+  const [selectedEmpresaId, setSelectedEmpresaId] = useState<string | undefined>(selectedEmpresa?.idEmpresa.toString());
   const { toast } = useToast();
 
   const handleSave = () => {
-    const selected = empresas.find(a => a.idEmpresa === selectedEmpresaId);
+    const selected = empresas.find(e => e.idEmpresa.toString() === selectedEmpresaId);
     if (selected) {
       setEmpresa(selected);
       toast({
         title: "Empresa guardada",
         description: `La empresa por defecto es ahora ${selected.RazonSocial}.`,
       });
-      if (onEmpresaSelected) {
-        onEmpresaSelected();
-      }
     } else {
         toast({
             variant: "destructive",
@@ -51,7 +43,7 @@ export function EmpresaSelector({ onEmpresaSelected }: EmpresaSelectorProps) {
                 </SelectTrigger>
                 <SelectContent>
                     {empresas.map((empresa) => (
-                    <SelectItem key={empresa.idEmpresa} value={empresa.idEmpresa}>
+                    <SelectItem key={empresa.idEmpresa} value={empresa.idEmpresa.toString()}>
                         {empresa.RazonSocial}
                     </SelectItem>
                     ))}

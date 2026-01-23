@@ -24,9 +24,11 @@ import {
   } from "@/components/ui/alert-dialog"
 import { cn } from "@/lib/utils";
 import { ThemeSwitcher } from "@/components/ThemeSwitcher";
+import { AsesorSelector } from "@/components/AsesorSelector";
+import { EmpresaSelector } from "@/components/EmpresaSelector";
 
 export default function ConfiguracionPage() {
-  const { logout, syncData, isSyncing } = useAuth();
+  const { user, logout, syncData, isSyncing } = useAuth();
   const { toast } = useToast();
 
   const handleSync = async () => {
@@ -54,6 +56,29 @@ export default function ConfiguracionPage() {
             <ThemeSwitcher />
         </CardContent>
       </Card>
+
+      {user?.idRol === 'admin' && (
+        <>
+          <Card>
+            <CardHeader>
+              <CardTitle>Seleccionar Empresa</CardTitle>
+              <CardDescription>Cambie la empresa de trabajo por defecto.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <EmpresaSelector />
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle>Seleccionar Asesor</CardTitle>
+              <CardDescription>Cambie el asesor para supervisión.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <AsesorSelector />
+            </CardContent>
+          </Card>
+        </>
+      )}
       
       <Card>
         <CardHeader>

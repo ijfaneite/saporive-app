@@ -2,7 +2,6 @@
 
 import React, { useState } from 'react';
 import { useAuth } from '@/lib/auth';
-import { Asesor } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import {
   Select,
@@ -14,11 +13,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from 'lucide-react';
 
-interface AsesorSelectorProps {
-    onAsesorSelected?: () => void;
-}
-
-export function AsesorSelector({ onAsesorSelected }: AsesorSelectorProps) {
+export function AsesorSelector() {
   const { setAsesor, asesor: currentAsesor, asesores, isSyncing } = useAuth();
   const [selectedAsesorId, setSelectedAsesorId] = useState<string | undefined>(currentAsesor?.idAsesor);
   const { toast } = useToast();
@@ -31,9 +26,6 @@ export function AsesorSelector({ onAsesorSelected }: AsesorSelectorProps) {
         title: "Asesor guardado",
         description: `El asesor por defecto es ahora ${selected.Asesor}.`,
       });
-      if (onAsesorSelected) {
-        onAsesorSelected();
-      }
     } else {
         toast({
             variant: "destructive",
@@ -45,7 +37,6 @@ export function AsesorSelector({ onAsesorSelected }: AsesorSelectorProps) {
 
   return (
     <div className="space-y-4">
-        <h3 className="font-semibold text-lg font-headline">Seleccionar Asesor</h3>
         {isSyncing ? (
             <div className="flex items-center justify-center h-24">
                 <Loader2 className="w-8 h-8 animate-spin text-primary" />
