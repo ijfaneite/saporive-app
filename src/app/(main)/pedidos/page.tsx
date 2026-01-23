@@ -9,7 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { PlusCircle, Loader2, RefreshCw, Pencil, Printer, Eye, Share2, MoreVertical, X } from "lucide-react";
+import { PlusCircle, Loader2, RefreshCw, Pencil, Printer, Eye, Share2, MoreVertical, X, WifiOff } from "lucide-react";
 import Link from 'next/link';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -31,7 +31,7 @@ import { filterPedidosByTerm } from '@/lib/filter-config';
 
 
 export default function PedidosPage() {
-  const { token, asesor, clients, logout } = useAuth();
+  const { token, asesor, clients, logout, localPedidos, isSyncingLocal } = useAuth();
   const { toast } = useToast();
   const router = useRouter();
 
@@ -116,9 +116,14 @@ export default function PedidosPage() {
     return clients.find(c => c.idCliente === idCliente);
   }, [clients]);
 
+  const combinedPedidos = useMemo(() => {
+    const allPedidos = [...localPedidos, ...pedidos];
+    return allPedidos.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }, [pedidos, localPedidos]);
+
   const filteredPedidos = useMemo(() => {
-    return filterPedidosByTerm(pedidos, searchTerm, getCliente);
-  }, [pedidos, searchTerm, getCliente]);
+    return filterPedidosByTerm(combinedPedidos, searchTerm, getCliente);
+  }, [combinedPedidos, searchTerm, getCliente]);
 
 
   const observer = useRef<IntersectionObserver>();
@@ -126,12 +131,12 @@ export default function PedidosPage() {
       if (isLoading || isFetchingMore || searchTerm) return;
       if (observer.current) observer.current.disconnect();
       observer.current = new IntersectionObserver(entries => {
-          if (entries[0].isIntersecting && hasMore) {
+          if (entries[0].isIntersecting && hasMore && !localPedidos.length) { // Do not paginate if local orders are present
               fetchPedidos(page + 1);
           }
       });
       if (node) observer.current.observe(node);
-  }, [isLoading, isFetchingMore, hasMore, page, fetchPedidos, searchTerm]);
+  }, [isLoading, isFetchingMore, hasMore, page, fetchPedidos, searchTerm, localPedidos.length]);
 
   const updateStatus = useCallback(async (pedidoToUpdate: Pedido, newStatus: string): Promise<boolean> => {
     if (!token || !asesor) {
@@ -300,7 +305,7 @@ export default function PedidosPage() {
         <div className="flex-grow flex justify-center items-center">
             <Loader2 className="w-8 h-8 animate-spin text-primary" />
         </div>
-      ) : pedidos.length === 0 && !searchTerm ? (
+      ) : combinedPedidos.length === 0 && !searchTerm ? (
         <div className="flex-grow flex flex-col justify-center items-center text-center py-10 border-2 border-dashed rounded-lg">
           <p className="text-muted-foreground mb-4">No hay pedidos para mostrar.</p>
           <Link href="/pedidos/nuevo" passHref>
@@ -325,7 +330,10 @@ export default function PedidosPage() {
                            <CardContent className="p-3">
                                <div className="grid grid-cols-[1fr_auto] gap-x-4">
                                    <div className="min-w-0 flex-grow space-y-1 self-center">
-                                       <p className="font-bold text-lg text-foreground truncate">{pedido.idPedido}</p>
+                                       <p className="font-bold text-lg text-foreground truncate flex items-center gap-2">
+                                           {pedido.isLocal && <WifiOff className="h-4 w-4 text-destructive shrink-0" title="Pedido Local"/>}
+                                           {pedido.idPedido}
+                                       </p>
                                        <p className="font-medium truncate">{cliente ? cliente.Cliente : 'Sin cliente'}</p>
                                        {cliente && (
                                            <p className="text-xs text-muted-foreground truncate">{cliente.Rif}</p>
@@ -334,9 +342,9 @@ export default function PedidosPage() {
 
                                     <div className="flex flex-col items-end gap-1 text-right">
                                         <Badge 
-                                            variant={getStatusVariant(pedido.Status)}
+                                            variant={pedido.isLocal ? 'warning' : getStatusVariant(pedido.Status)}
                                         >
-                                            {pedido.Status}
+                                            {pedido.isLocal ? (isSyncingLocal ? 'Sincronizando...' : 'Local') : pedido.Status}
                                         </Badge>
                                         <p className="text-xs text-muted-foreground">
                                             {format(new Date(pedido.fechaPedido), "dd/MMM/yyyy", { locale: es })}
@@ -361,17 +369,17 @@ export default function PedidosPage() {
                                                 <span>Consultar</span>
                                             </DropdownMenuItem>
                                             <DropdownMenuItem
-                                                disabled={['enviado', 'impreso'].includes(pedido.Status.toLowerCase())}
+                                                disabled={pedido.isLocal || ['enviado', 'impreso'].includes(pedido.Status.toLowerCase())}
                                                 onSelect={() => router.push(`/pedidos/${pedido.idPedido}`)}
                                             >
                                                 <Pencil className="mr-2 h-4 w-4" />
                                                 <span>Editar</span>
                                             </DropdownMenuItem>
-                                            <DropdownMenuItem onSelect={() => handlePrint(pedido)}>
+                                            <DropdownMenuItem onSelect={() => handlePrint(pedido)} disabled={pedido.isLocal}>
                                                 <Printer className="mr-2 h-4 w-4" />
                                                 <span>Imprimir</span>
                                             </DropdownMenuItem>
-                                            <DropdownMenuItem onSelect={() => setSharingPedido(pedido)} disabled={isSharing}>
+                                            <DropdownMenuItem onSelect={() => setSharingPedido(pedido)} disabled={isSharing || !!pedido.isLocal}>
                                                 {isSharing && sharingPedido?.idPedido === pedido.idPedido ? (
                                                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                                                 ) : (

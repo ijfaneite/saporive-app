@@ -2,9 +2,10 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { User, Asesor, Token, Cliente, Producto, Empresa } from '@/lib/types';
+import { User, Asesor, Token, Cliente, Producto, Empresa, Pedido, PedidoCreatePayload, DetallePedido } from '@/lib/types';
 import { API_BASE_URL, API_ROUTES } from '@/lib/config';
 import { useToast } from '@/hooks/use-toast';
+import { useApiStatus } from '@/hooks/use-api-status';
 
 // Helper functions to manage cookies
 const setCookie = (name: string, value: string, days: number) => {
@@ -84,14 +85,17 @@ interface AuthContextType {
   products: Producto[];
   empresas: Empresa[];
   selectedEmpresa: Empresa | null;
+  localPedidos: Pedido[];
   login: (username: string, password: string) => Promise<void>;
   logout: () => void;
   setAsesor: (asesor: Asesor) => void;
   setEmpresa: (empresa: Empresa) => void;
   updateEmpresaInState: (empresa: Empresa) => void;
   syncData: (tokenOverride?: string) => Promise<void>;
+  addLocalPedido: (pedidoPayload: Omit<PedidoCreatePayload, 'idPedido' | 'fechaPedido' | 'Status'>) => Promise<void>;
   isLoading: boolean;
   isSyncing: boolean;
+  isSyncingLocal: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -107,6 +111,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [selectedEmpresa, setSelectedEmpresaState] = useState<Empresa | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [localPedidos, setLocalPedidos] = useState<Pedido[]>([]);
+  const [isSyncingLocal, setIsSyncingLocal] = useState(false);
+  const isOnline = useApiStatus();
   const router = useRouter();
   const { toast } = useToast();
 
@@ -115,10 +122,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setUser(null);
     setAsesorState(null);
     setSelectedEmpresaState(null);
-    setAsesores([]);
-    setClients([]);
-    setProducts([]);
-    setEmpresas([]);
     eraseCookie('auth_token');
     router.push('/login');
   }, [router]);
@@ -144,6 +147,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
   }, [toast, logout]);
   
+    const updateEmpresaInState = (updatedEmpresa: Empresa) => {
+        const updatedEmpresas = empresas.map(e => e.idEmpresa === updatedEmpresa.idEmpresa ? updatedEmpresa : e);
+        setEmpresas(updatedEmpresas);
+        setEncryptedItem('empresas', updatedEmpresas);
+        if (selectedEmpresa?.idEmpresa === updatedEmpresa.idEmpresa) {
+            setEmpresa(updatedEmpresa);
+        }
+    };
+    
   const syncData = useCallback(async (tokenOverride?: string) => {
     const currentToken = tokenOverride || token;
     if (!currentToken) return;
@@ -182,28 +194,182 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [token, toast, logout, fetchClientsForAsesor]);
 
+
+  const addLocalPedido = useCallback(async (
+    pedidoPayload: Omit<PedidoCreatePayload, 'idPedido' | 'fechaPedido' | 'Status'>
+  ) => {
+    const currentLocalPedidos = getEncryptedItem<Pedido[]>('localPedidos') || [];
+    
+    const localIdCounters = currentLocalPedidos
+      .map(p => parseInt(p.idPedido.split('-')[1] || '0'))
+      .filter(n => !isNaN(n));
+    const nextId = (localIdCounters.length > 0 ? Math.max(...localIdCounters) : 0) + 1;
+    const tempId = `99999999-${String(nextId).padStart(3, '0')}`;
+
+    const now = new Date();
+
+    const detallesConTotal: DetallePedido[] = pedidoPayload.detalles.map((d, index) => ({
+        ...d,
+        id: `local-${now.getTime()}-${index}`,
+        idPedido: tempId,
+        Total: d.Cantidad * d.Precio,
+        createdAt: now.toISOString(),
+        updatedAt: now.toISOString(),
+        createdBy: user?.username || 'local',
+        updatedBy: user?.username || 'local',
+    }));
+
+    const newLocalPedido: Pedido = {
+      ...pedidoPayload,
+      idPedido: tempId,
+      fechaPedido: now.toISOString(),
+      Status: 'Pendiente (Local)',
+      detalles: detallesConTotal,
+      createdAt: now.toISOString(),
+      updatedAt: now.toISOString(),
+      createdBy: user?.username || 'local',
+      updatedBy: user?.username || 'local',
+      isLocal: true,
+    };
+
+    const updatedLocalPedidos = [...currentLocalPedidos, newLocalPedido];
+    setLocalPedidos(updatedLocalPedidos);
+    setEncryptedItem('localPedidos', updatedLocalPedidos);
+
+    toast({
+        title: "Pedido Guardado Localmente",
+        description: `El pedido ${tempId} se guardó y se sincronizará cuando haya conexión.`,
+    });
+
+  }, [user, toast]);
+
+    const syncLocalPedidos = useCallback(async () => {
+        const pedidosToSync = getEncryptedItem<Pedido[]>('localPedidos') || [];
+        if (pedidosToSync.length === 0 || !isOnline || !token || !selectedEmpresa) {
+            return;
+        }
+    
+        setIsSyncingLocal(true);
+        toast({ title: 'Sincronizando pedidos locales...' });
+        
+        let currentEmpresa = selectedEmpresa;
+        let failedSyncs: Pedido[] = [];
+        let successCount = 0;
+    
+        for (const localPedido of pedidosToSync) {
+            try {
+                const nextId = String(currentEmpresa.idPedido).padStart(3, '0');
+                const date = new Date(localPedido.fechaPedido);
+                const year = date.getFullYear();
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const day = String(date.getDate()).padStart(2, '0');
+                const realIdPedido = `${year}${month}${day}-${nextId}`;
+                
+                const pedidoPayload: PedidoCreatePayload = {
+                  idPedido: realIdPedido,
+                  idEmpresa: localPedido.idEmpresa,
+                  fechaPedido: localPedido.fechaPedido,
+                  totalPedido: localPedido.totalPedido,
+                  idAsesor: localPedido.idAsesor,
+                  idCliente: localPedido.idCliente,
+                  Status: "Pendiente",
+                  detalles: localPedido.detalles.map(d => ({ Cantidad: d.Cantidad, Precio: d.Precio, idProducto: d.idProducto })),
+                };
+    
+                const response = await fetch(`${API_BASE_URL}${API_ROUTES.pedidos}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                    body: JSON.stringify(pedidoPayload),
+                });
+    
+                if (response.status === 401) throw new Error("401");
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({}));
+                    throw new Error(`Error al sincronizar pedido ${localPedido.idPedido}: ${errorData.detail || 'Error desconocido'}`);
+                }
+                
+                const nextCounter = currentEmpresa.idPedido + 1;
+                const empresaUpdateRes = await fetch(`${API_BASE_URL}${API_ROUTES.updateEmpresaPedido}${currentEmpresa.idEmpresa}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                    body: JSON.stringify({ idPedido: nextCounter }),
+                });
+    
+                if (!empresaUpdateRes.ok) throw new Error('No se pudo actualizar el contador de pedidos de la empresa.');
+                
+                const updatedEmpresa = await empresaUpdateRes.json();
+                currentEmpresa = updatedEmpresa;
+                updateEmpresaInState(updatedEmpresa);
+    
+                successCount++;
+    
+            } catch (error) {
+                console.error(`Failed to sync order ${localPedido.idPedido}:`, error);
+                failedSyncs.push(localPedido);
+                 if (error instanceof Error && error.message === "401") {
+                    toast({ variant: "destructive", title: "Sesión expirada" });
+                    logout();
+                    setIsSyncingLocal(false);
+                    return;
+                }
+            }
+        }
+    
+        setLocalPedidos(failedSyncs);
+        setEncryptedItem('localPedidos', failedSyncs);
+    
+        setIsSyncingLocal(false);
+        if (successCount > 0) {
+            toast({
+                title: "Sincronización Completada",
+                description: `${successCount} pedido(s) local(es) se han sincronizado.`,
+            });
+            await syncData();
+        } else if (pedidosToSync.length > 0) {
+            toast({
+                variant: "destructive",
+                title: "Fallo en la Sincronización",
+                description: "No se pudieron sincronizar los pedidos locales. Se reintentará más tarde.",
+            });
+        }
+    
+    }, [isOnline, token, selectedEmpresa, updateEmpresaInState, syncData, toast, logout]);
+
   useEffect(() => {
     const initialDataLoad = async () => {
-      if (!token) { setIsLoading(false); return; }
-      setIsLoading(true);
-      setUser(getEncryptedItem<User>('user'));
-      setAsesorState(getEncryptedItem<Asesor>('asesor'));
-      setSelectedEmpresaState(getEncryptedItem<Empresa>('empresa'));
-      const cachedProducts = getEncryptedItem<Producto[]>('products');
-      if (cachedProducts && cachedProducts.length > 0) {
-        setProducts(cachedProducts);
-        setEmpresas(getEncryptedItem<Empresa[]>('empresas') || []);
-        setAsesores(getEncryptedItem<Asesor[]>('asesores') || []);
-        setClients(getEncryptedItem<Cliente[]>('clients') || []);
-        setIsLoading(false);
-        await syncData(token);
-      } else {
-        await syncData(token);
-        setIsLoading(false);
-      }
+        setIsLoading(true);
+        const cachedUser = getEncryptedItem<User>('user');
+        const cachedToken = getCookie('auth_token');
+        setUser(cachedUser);
+        setToken(cachedToken);
+        setAsesorState(getEncryptedItem<Asesor>('asesor'));
+        setSelectedEmpresaState(getEncryptedItem<Empresa>('empresa'));
+        setLocalPedidos(getEncryptedItem<Pedido[]>('localPedidos') || []);
+        
+        const cachedProducts = getEncryptedItem<Producto[]>('products');
+        if (cachedProducts && cachedProducts.length > 0) {
+            setProducts(cachedProducts);
+            setEmpresas(getEncryptedItem<Empresa[]>('empresas') || []);
+            setAsesores(getEncryptedItem<Asesor[]>('asesores') || []);
+            setClients(getEncryptedItem<Cliente[]>('clients') || []);
+            setIsLoading(false);
+            if (cachedToken) await syncData(cachedToken);
+        } else if (cachedToken) {
+            await syncData(cachedToken);
+            setIsLoading(false);
+        } else {
+            setIsLoading(false);
+        }
     };
     initialDataLoad();
-  }, [token, syncData]);
+  }, [token]);
+
+  useEffect(() => {
+    if (isOnline && (getEncryptedItem<Pedido[]>('localPedidos') || []).length > 0) {
+        syncLocalPedidos();
+    }
+  }, [isOnline, syncLocalPedidos]);
+
 
   const login = async (username: string, password: string) => {
     let response;
@@ -232,6 +398,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setEncryptedItem('user', userData);
     setUser(userData);
     setToken(access_token);
+    setAsesorState(null);
+    setSelectedEmpresaState(null);
     router.push('/pedidos');
   };
 
@@ -253,15 +421,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [user, asesores, asesor, setAsesor]);
 
-  const updateEmpresaInState = (updatedEmpresa: Empresa) => {
-    const updatedEmpresas = empresas.map(e => e.idEmpresa === updatedEmpresa.idEmpresa ? updatedEmpresa : e);
-    setEmpresas(updatedEmpresas);
-    setEncryptedItem('empresas', updatedEmpresas);
-    if (selectedEmpresa?.idEmpresa === updatedEmpresa.idEmpresa) setEmpresa(updatedEmpresa);
-  };
-
   return (
-    <AuthContext.Provider value={{ user, token, asesor, asesores, clients, products, empresas, selectedEmpresa, login, logout, setAsesor, setEmpresa, updateEmpresaInState, syncData, isLoading, isSyncing }}>
+    <AuthContext.Provider value={{ user, token, asesor, asesores, clients, products, empresas, selectedEmpresa, localPedidos, login, logout, setAsesor, setEmpresa, updateEmpresaInState, syncData, addLocalPedido, isLoading, isSyncing, isSyncingLocal }}>
       {children}
     </AuthContext.Provider>
   );

@@ -10,17 +10,21 @@ import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import { PedidoForm } from '@/components/PedidoForm';
+import { useApiStatus } from '@/hooks/use-api-status';
 
 export default function NuevoPedidoPage() {
-  const { token, selectedEmpresa, updateEmpresaInState, logout } = useAuth();
+  const { token, selectedEmpresa, updateEmpresaInState, logout, addLocalPedido } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
+  const isOnline = useApiStatus();
 
   const [isSaving, setIsSaving] = useState(false);
   const [idPedidoGenerado, setIdPedidoGenerado] = useState<string>('');
 
   useEffect(() => {
-    if (selectedEmpresa) {
+    if (!isOnline) {
+        setIdPedidoGenerado("PENDIENTE (OFFLINE)");
+    } else if (selectedEmpresa) {
         const date = new Date();
         const year = date.getFullYear();
         const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -30,9 +34,35 @@ export default function NuevoPedidoPage() {
     } else {
         setIdPedidoGenerado('Seleccione una empresa');
     }
-  }, [selectedEmpresa]);
+  }, [selectedEmpresa, isOnline]);
 
   const handleSavePedido = async (pedidoPayload: PedidoCreatePayload) => {
+    setIsSaving(true);
+    
+    if (!isOnline) {
+        try {
+            const localPayload = {
+                idEmpresa: pedidoPayload.idEmpresa,
+                totalPedido: pedidoPayload.totalPedido,
+                idAsesor: pedidoPayload.idAsesor,
+                idCliente: pedidoPayload.idCliente,
+                detalles: pedidoPayload.detalles,
+            };
+            await addLocalPedido(localPayload);
+            router.push('/pedidos');
+        } catch (error) {
+            toast({
+                variant: "destructive",
+                title: "Error al guardar localmente",
+                description: error instanceof Error ? error.message : "Ocurrió un error inesperado.",
+            });
+        } finally {
+            setIsSaving(false);
+        }
+        return;
+    }
+
+
     if (!token) {
         toast({
             variant: "destructive",
@@ -40,14 +70,14 @@ export default function NuevoPedidoPage() {
             description: "No se ha encontrado el token. Por favor, inicie sesión de nuevo.",
         });
         logout();
+        setIsSaving(false);
         return;
     }
     if (!selectedEmpresa) {
         toast({ variant: "destructive", title: "Error de configuración", description: "No se ha seleccionado una empresa." });
+        setIsSaving(false);
         return;
     }
-
-    setIsSaving(true);
 
     try {
       const response = await fetch(`${API_BASE_URL}${API_ROUTES.pedidos}`, {
