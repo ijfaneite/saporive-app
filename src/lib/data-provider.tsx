@@ -16,7 +16,7 @@ interface DataContextType {
     productos: Producto[];
     empresas: Empresa[];
     selectedEmpresa: Empresa | null;
-    localPedidos: Pedido[];
+    pedidosLocales: Pedido[];
     findAndReserveNextPedidoId: () => Promise<string | null>;
     setAsesor: (asesor: Asesor) => void;
     setEmpresa: (empresa: Empresa) => void;
@@ -43,7 +43,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     const [selectedEmpresa, setSelectedEmpresaState] = useState<Empresa | null>(null);
     const [isDataLoading, setIsDataLoading] = useState(true);
     const [isSyncing, setIsSyncing] = useState(false);
-    const [localPedidos, setLocalPedidos] = useState<Pedido[]>([]);
+    const [pedidosLocales, setPedidosLocales] = useState<Pedido[]>([]);
     const [isSyncingLocal, setIsSyncingLocal] = useState(false);
 
     const fetchClientesForAsesor = useCallback(async (asesorId: string) => {
@@ -188,19 +188,19 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     const findAndReserveNextPedidoId = useCallback(async (): Promise<string | null> => {
         if (!token || !selectedEmpresa) return null;
     
-        let idToTry = selectedEmpresa.idPedido;
+        let idCounter = selectedEmpresa.idPedido;
         let attempts = 0;
         const MAX_ATTEMPTS = 50;
     
         while (attempts < MAX_ATTEMPTS) {
             attempts++;
-            idToTry++; // Always increment to get the next candidate.
+            idCounter++; 
             
             const date = new Date();
             const year = date.getFullYear();
             const month = String(date.getMonth() + 1).padStart(2, '0');
             const day = String(date.getDate()).padStart(2, '0');
-            const nextId = String(idToTry).padStart(3, '0');
+            const nextId = String(idCounter).padStart(3, '0');
             const candidateId = `${year}${month}${day}-${nextId}`;
     
             try {
@@ -208,15 +208,11 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
                     headers: { Authorization: `Bearer ${token}` },
                 });
     
-                if (checkResponse.ok) { // ID is already taken, loop will continue and increment.
-                    continue;
-                }
-    
-                if (checkResponse.status === 404) { // ID is free, try to claim it.
+                if (checkResponse.status === 404) {
                     const updateResponse = await fetch(`${API_BASE_URL}${API_ROUTES.updateEmpresaPedido}${selectedEmpresa.idEmpresa}`, {
                         method: 'PUT',
                         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-                        body: JSON.stringify({ idPedido: idToTry }), // Claim this ID.
+                        body: JSON.stringify({ idPedido: idCounter }),
                     });
     
                     if (updateResponse.ok) {
@@ -224,10 +220,10 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
                         await updateEmpresaInState(updatedEmpresa);
                         return candidateId;
                     } else {
-                        // Update failed, likely a race condition. Someone else claimed it.
-                        // The loop will continue, and idToTry will be incremented again on the next iteration.
                         continue;
                     }
+                } else if (checkResponse.ok) {
+                    continue;
                 }
                 
                 toast({ variant: 'destructive', title: 'Error de Red', description: `No se pudo verificar el ID del pedido. (Estatus: ${checkResponse.status})` });
@@ -247,15 +243,17 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         pedidoPayload: Omit<PedidoCreatePayload, 'idPedido' | 'fechaPedido' | 'Status'>
     ) => {
         if (!user) return;
-        const lastLocalPedido = await db.localPedidos.orderBy('idPedido').last();
-        let nextIdNum = 1;
-        if (lastLocalPedido) {
+        const allLocalPedidos = await db.pedidos.where('idPedido').startsWith('L-').toArray();
+        const lastIdNum = allLocalPedidos.reduce((max, p) => {
             try {
-                const lastIdNum = parseInt(lastLocalPedido.idPedido.split('-')[1]);
-                if (!isNaN(lastIdNum)) nextIdNum = lastIdNum + 1;
-            } catch (e) {}
-        }
-
+                const num = parseInt(p.idPedido.split('-')[1]);
+                return num > max ? num : max;
+            } catch {
+                return max;
+            }
+        }, 0);
+        
+        const nextIdNum = lastIdNum + 1;
         const tempId = `L-${String(nextIdNum).padStart(3, '0')}`;
         const now = new Date();
 
@@ -272,21 +270,21 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
           isLocal: true,
         };
         
-        await db.localPedidos.add(newLocalPedido);
-        const allLocalPedidos = await db.localPedidos.orderBy('createdAt').reverse().toArray();
-        setLocalPedidos(allLocalPedidos);
+        await db.pedidos.add(newLocalPedido);
+        const updatedLocalPedidos = await db.pedidos.where('isLocal').equals(true).reverse().sortBy('createdAt');
+        setPedidosLocales(updatedLocalPedidos);
 
         toast({ title: "Pedido Guardado Localmente", description: `El pedido ${tempId} se sincronizará cuando haya conexión.` });
 
     }, [user, toast]);
 
-    const loadLocalPedidosFromDb = useCallback(async () => {
-        const localPedidosFromDb = await db.localPedidos.orderBy('createdAt').reverse().toArray();
-        setLocalPedidos(localPedidosFromDb);
+    const loadPedidosLocalesFromDb = useCallback(async () => {
+        const localPedidosFromDb = await db.pedidos.where('isLocal').equals(true).reverse().sortBy('createdAt');
+        setPedidosLocales(localPedidosFromDb);
     }, []);
     
     const syncLocalPedidos = useCallback(async () => {
-        const pedidosToSync = await db.localPedidos.toArray();
+        const pedidosToSync = await db.pedidos.where('isLocal').equals(true).toArray();
         if (pedidosToSync.length === 0 || !isOnline || !token) return;
 
         const confirmSync = window.confirm(`Tiene ${pedidosToSync.length} pedido(s) locales. ¿Desea sincronizarlos ahora?`);
@@ -322,7 +320,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
                     throw new Error(`Error al sincronizar pedido ${localPedido.idPedido}: ${errorData.detail || 'Error desconocido'}`);
                 }
                 
-                await db.localPedidos.delete(localPedido.idPedido);
+                await db.pedidos.delete(localPedido.idPedido);
                 successCount++;
     
             } catch (error) {
@@ -338,8 +336,8 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
             }
         }
     
-        const remainingLocalPedidos = await db.localPedidos.toArray();
-        setLocalPedidos(remainingLocalPedidos);
+        const remainingLocalPedidos = await db.pedidos.where('isLocal').equals(true).toArray();
+        setPedidosLocales(remainingLocalPedidos);
         setIsSyncingLocal(false);
 
         if (successCount > 0) {
@@ -349,26 +347,26 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     }, [isOnline, token, findAndReserveNextPedidoId, toast, logout]);
 
     useEffect(() => {
-        loadLocalPedidosFromDb();
-    }, [loadLocalPedidosFromDb]);
+        loadPedidosLocalesFromDb();
+    }, [loadPedidosLocalesFromDb]);
     
     useEffect(() => {
       const checkAndPromptSync = async () => {
           if (isOnline) {
-              const count = await db.localPedidos.count();
+              const count = await db.pedidos.where('isLocal').equals(true).count();
               if (count > 0 && !isSyncingLocal) {
                   syncLocalPedidos();
               }
           }
       }
-      const interval = setInterval(checkAndPromptSync, 60000); // Check every minute
+      const interval = setInterval(checkAndPromptSync, 60000);
       checkAndPromptSync();
       return () => clearInterval(interval);
     }, [isOnline, isSyncingLocal, syncLocalPedidos]);
 
     return (
         <DataContext.Provider value={{ 
-            asesor, asesores, clientes, productos, empresas, selectedEmpresa, localPedidos, 
+            asesor, asesores, clientes, productos, empresas, selectedEmpresa, pedidosLocales, 
             setAsesor, setEmpresa, updateEmpresaInState, syncData, addLocalPedido, 
             findAndReserveNextPedidoId,
             isSyncing, isSyncingLocal, isDataLoading

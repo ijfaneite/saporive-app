@@ -33,7 +33,7 @@ import { filterPedidosByTerm } from '@/lib/filter-config';
 
 export default function PedidosPage() {
   const { token, logout } = useAuth();
-  const { asesor, clientes, localPedidos, isSyncingLocal } = useData();
+  const { asesor, clientes, pedidosLocales, isSyncingLocal } = useData();
   const { toast } = useToast();
   const router = useRouter();
 
@@ -119,9 +119,9 @@ export default function PedidosPage() {
   }, [clientes]);
 
   const combinedPedidos = useMemo(() => {
-    const allPedidos = [...localPedidos, ...pedidos];
+    const allPedidos = [...pedidosLocales, ...pedidos];
     return allPedidos.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-  }, [pedidos, localPedidos]);
+  }, [pedidos, pedidosLocales]);
 
   const filteredPedidos = useMemo(() => {
     return filterPedidosByTerm(combinedPedidos, searchTerm, getCliente);
@@ -133,12 +133,12 @@ export default function PedidosPage() {
       if (isLoading || isFetchingMore || searchTerm) return;
       if (observer.current) observer.current.disconnect();
       observer.current = new IntersectionObserver(entries => {
-          if (entries[0].isIntersecting && hasMore && !localPedidos.length) { // Do not paginate if local orders are present
+          if (entries[0].isIntersecting && hasMore && !pedidosLocales.length) { // Do not paginate if local orders are present
               fetchPedidos(page + 1);
           }
       });
       if (node) observer.current.observe(node);
-  }, [isLoading, isFetchingMore, hasMore, page, fetchPedidos, searchTerm, localPedidos.length]);
+  }, [isLoading, isFetchingMore, hasMore, page, fetchPedidos, searchTerm, pedidosLocales.length]);
 
   const updateStatus = useCallback(async (pedidoToUpdate: Pedido, newStatus: string): Promise<boolean> => {
     if (!token || !asesor) {

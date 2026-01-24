@@ -7,7 +7,7 @@ export interface IConfig {
 }
 
 export class AppDatabase extends Dexie {
-  localPedidos!: Table<Pedido, string>; 
+  pedidos!: Table<Pedido, string>;
   user!: Table<User, string>;
   asesores!: Table<Asesor, string>;
   productos!: Table<Producto, string>;
@@ -17,8 +17,8 @@ export class AppDatabase extends Dexie {
 
   constructor() {
     super('saporive-app-db');
-    this.version(2).stores({
-      localPedidos: 'idPedido, createdAt',
+    this.version(3).stores({
+      pedidos: 'idPedido, createdAt, isLocal',
       user: 'username',
       asesores: 'idAsesor',
       productos: 'idProducto',
@@ -30,7 +30,7 @@ export class AppDatabase extends Dexie {
 
   async clearAllData() {
     await Promise.all([
-      this.localPedidos.clear(),
+      this.pedidos.clear(),
       this.user.clear(),
       this.asesores.clear(),
       this.productos.clear(),
