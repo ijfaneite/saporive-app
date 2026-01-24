@@ -49,7 +49,7 @@ interface DataContextType {
 const DataContext = createContext<DataContextType | undefined>(undefined);
 
 export const DataProvider = ({ children }: { children: ReactNode }) => {
-    const { token, user, logout } = useAuth();
+    const { token, user, logout, isLoading: isAuthLoading } = useAuth();
     const { toast } = useToast();
     const isOnline = useApiStatus();
 
@@ -64,12 +64,12 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     const [localPedidos, setLocalPedidos] = useState<Pedido[]>([]);
     const [isSyncingLocal, setIsSyncingLocal] = useState(false);
 
-    const fetchClientsForAsesor = useCallback(async (asesorId: string, currentToken: string) => {
-        if (!currentToken) return;
+    const fetchClientsForAsesor = useCallback(async (asesorId: string) => {
+        if (!token) return;
         try {
             const url = new URL(`${API_BASE_URL}${API_ROUTES.clientes}`);
             url.searchParams.append('id_asesor', asesorId);
-            const response = await fetch(url.toString(), { headers: { Authorization: `Bearer ${currentToken}` } });
+            const response = await fetch(url.toString(), { headers: { Authorization: `Bearer ${token}` } });
             if (response.status === 401) throw new Error("401");
             if (!response.ok) throw new Error('No se pudieron cargar los clientes.');
             const clientesData: Cliente[] = await response.json();
@@ -84,17 +84,16 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
                 toast({ variant: "destructive", title: "Error al Cargar Clientes", description: "No se pudieron cargar los clientes. Intente sincronizar de nuevo." });
             }
         }
-    }, [toast, logout]);
+    }, [token, toast, logout]);
     
-    const syncData = useCallback(async (tokenOverride?: string) => {
-        const currentToken = tokenOverride || token;
-        if (!currentToken) return;
+    const syncData = useCallback(async () => {
+        if (!token) return;
         setIsSyncing(true);
         try {
           const responses = await Promise.all([
-            fetch(`${API_BASE_URL}${API_ROUTES.productos}`, { headers: { Authorization: `Bearer ${currentToken}` } }),
-            fetch(`${API_BASE_URL}${API_ROUTES.empresas}`, { headers: { Authorization: `Bearer ${currentToken}` } }),
-            fetch(`${API_BASE_URL}${API_ROUTES.asesores}`, { headers: { Authorization: `Bearer ${currentToken}` } }),
+            fetch(`${API_BASE_URL}${API_ROUTES.productos}`, { headers: { Authorization: `Bearer ${token}` } }),
+            fetch(`${API_BASE_URL}${API_ROUTES.empresas}`, { headers: { Authorization: `Bearer ${token}` } }),
+            fetch(`${API_BASE_URL}${API_ROUTES.asesores}`, { headers: { Authorization: `Bearer ${token}` } }),
           ]);
           if (responses.some(res => res.status === 401)) throw new Error("401");
           const [productosRes, empresasRes, asesoresRes] = responses;
@@ -110,7 +109,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
           const localAsesor = getItem<Asesor>('asesor');
           if(localAsesor) {
             const freshAsesor = asesoresData.find(a => a.idAsesor === localAsesor.idAsesor);
-            if (freshAsesor) await fetchClientsForAsesor(freshAsesor.idAsesor, currentToken);
+            if (freshAsesor) await fetchClientsForAsesor(freshAsesor.idAsesor);
           }
         } catch (error) {
           if (error instanceof Error && error.message === "401") {
@@ -125,62 +124,61 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       }, [token, toast, logout, fetchClientsForAsesor]);
 
 
-    const loadInitialData = useCallback(async () => {
-        const localUser = getItem<User>('user');
-        const localToken = getCookie('auth_token');
-
-        if (!localUser || !localToken) {
-            setIsDataLoading(false);
-            return;
-        }; 
-        
-        setIsDataLoading(true);
-
-        const cachedAsesor = getItem<Asesor>('asesor');
-        const cachedEmpresa = getItem<Empresa>('empresa');
-        const cachedProducts = getItem<Producto[]>('products') || [];
-        const cachedEmpresas = getItem<Empresa[]>('empresas') || [];
-        const cachedAsesores = getItem<Asesor[]>('asesores') || [];
-        const cachedClients = getItem<Cliente[]>('clients') || [];
-
-        setAsesorState(cachedAsesor);
-        setSelectedEmpresaState(cachedEmpresa);
-        setProducts(cachedProducts);
-        setEmpresas(cachedEmpresas);
-        setAsesores(cachedAsesores);
-        setClients(cachedClients);
-        
-        if (cachedProducts.length === 0 || cachedEmpresas.length === 0 || cachedAsesores.length === 0) {
-            await syncData(localToken);
-        }
-
-        const allAsesores = getItem<Asesor[]>('asesores') || [];
-        if (localUser.idRol !== 'admin' && allAsesores.length > 0 && !cachedAsesor) {
-            const match = allAsesores.find(a => a.idAsesor.toLowerCase() === localUser.username.toLowerCase());
-            if (match) {
-                setAsesorState(match);
-                setItem('asesor', match);
-                if (cachedClients.length === 0) {
-                    await fetchClientsForAsesor(match.idAsesor, localToken);
-                }
-            }
-        }
-        
-        setIsDataLoading(false);
-    }, [syncData, fetchClientsForAsesor]);
-
-    useEffect(() => {
-        loadInitialData();
-    }, [loadInitialData, user]);
-
-
     const setAsesor = useCallback((asesorToSet: Asesor) => {
         setAsesorState(asesorToSet);
         setItem('asesor', asesorToSet);
         if (token) {
-            fetchClientsForAsesor(asesorToSet.idAsesor, token);
+            fetchClientsForAsesor(asesorToSet.idAsesor);
         }
     }, [token, fetchClientsForAsesor]);
+
+    useEffect(() => {
+        const loadAppData = async () => {
+            // Only proceed if authentication is resolved and user is logged in
+            if (!user || !token) {
+                setIsDataLoading(false);
+                return;
+            }
+
+            setIsDataLoading(true);
+
+            const cachedAsesor = getItem<Asesor>('asesor');
+            const cachedEmpresa = getItem<Empresa>('empresa');
+            const cachedProducts = getItem<Producto[]>('products') || [];
+            const cachedEmpresas = getItem<Empresa[]>('empresas') || [];
+            const cachedAsesores = getItem<Asesor[]>('asesores') || [];
+            const cachedClients = getItem<Cliente[]>('clients') || [];
+
+            setAsesorState(cachedAsesor);
+            setSelectedEmpresaState(cachedEmpresa);
+            setProducts(cachedProducts);
+            setEmpresas(cachedEmpresas);
+            setAsesores(cachedAsesores);
+            setClients(cachedClients);
+            
+            if (cachedProducts.length === 0 || cachedEmpresas.length === 0 || cachedAsesores.length === 0) {
+                await syncData();
+            }
+
+            // After potential sync, re-read asesores from localStorage to perform user-role specific logic
+            const allAsesores = getItem<Asesor[]>('asesores') || [];
+            if (user.idRol !== 'admin' && allAsesores.length > 0 && !cachedAsesor) {
+                const match = allAsesores.find(a => a.idAsesor.toLowerCase() === user.username.toLowerCase());
+                if (match) {
+                    setAsesor(match); // This will also save to localStorage and fetch clients
+                }
+            } else if (cachedAsesor && cachedClients.length === 0) {
+                await fetchClientsForAsesor(cachedAsesor.idAsesor);
+            }
+            
+            setIsDataLoading(false);
+        };
+        
+        // Wait until the authentication process is complete before trying to load data
+        if (!isAuthLoading) {
+            loadAppData();
+        }
+    }, [user, token, isAuthLoading, syncData, fetchClientsForAsesor, setAsesor]);
 
     const setEmpresa = (empresaToSet: Empresa) => {
         setSelectedEmpresaState(empresaToSet);
@@ -202,8 +200,9 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         // We assume selectedEmpresa.idPedido is the last *used* ID. We start checking from the next one.
         let currentIdToTry = selectedEmpresa.idPedido + 1;
         let attempts = 0;
+        const MAX_ATTEMPTS = 50;
     
-        while (attempts < 20) {
+        while (attempts < MAX_ATTEMPTS) {
             attempts++;
             
             const date = new Date();
