@@ -16,12 +16,12 @@ import { Button } from '@/components/ui/button';
 import { filterProductosByTerm } from '@/lib/filter-config';
 
 export default function PreciosPage() {
-  const { products, isDataLoading } = useData();
+  const { productos, isDataLoading } = useData();
   const [searchTerm, setSearchTerm] = useState('');
 
   const filteredProductos = useMemo(() => {
-    return filterProductosByTerm(products, searchTerm);
-  }, [searchTerm, products]);
+    return filterProductosByTerm(productos, searchTerm);
+  }, [searchTerm, productos]);
   
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value);

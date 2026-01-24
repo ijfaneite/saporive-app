@@ -33,7 +33,7 @@ import { filterPedidosByTerm } from '@/lib/filter-config';
 
 export default function PedidosPage() {
   const { token, logout } = useAuth();
-  const { asesor, clients, localPedidos, isSyncingLocal } = useData();
+  const { asesor, clientes, localPedidos, isSyncingLocal } = useData();
   const { toast } = useToast();
   const router = useRouter();
 
@@ -115,8 +115,8 @@ export default function PedidosPage() {
   }, [asesor, fetchPedidos]);
   
   const getCliente = useCallback((idCliente: string) => {
-    return clients.find(c => c.idCliente === idCliente);
-  }, [clients]);
+    return clientes.find(c => c.idCliente === idCliente);
+  }, [clientes]);
 
   const combinedPedidos = useMemo(() => {
     const allPedidos = [...localPedidos, ...pedidos];

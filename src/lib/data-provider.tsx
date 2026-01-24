@@ -8,24 +8,6 @@ import { useApiStatus } from '@/hooks/use-api-status';
 import { useAuth } from './auth';
 import { db } from './db';
 
-const setItem = (key: string, value: any) => {
-    if (typeof localStorage !== 'undefined') {
-        localStorage.setItem(key, JSON.stringify(value));
-    }
-}
-
-const getItem = <T>(key: string): T | null => {
-    if (typeof localStorage === 'undefined') return null;
-    const storedValue = localStorage.getItem(key);
-    if (!storedValue) return null;
-    try {
-        return JSON.parse(storedValue) as T;
-    } catch (error) {
-        console.error(`Failed to parse item '${key}' from localStorage`, error);
-        localStorage.removeItem(key);
-        return null;
-    }
-}
 
 interface DataContextType {
     asesor: Asesor | null;
@@ -64,7 +46,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     const [localPedidos, setLocalPedidos] = useState<Pedido[]>([]);
     const [isSyncingLocal, setIsSyncingLocal] = useState(false);
 
-    const fetchclientesForAsesor = useCallback(async (asesorId: string) => {
+    const fetchClientesForAsesor = useCallback(async (asesorId: string) => {
         if (!token) return;
         try {
             const url = new URL(`${API_BASE_URL}${API_ROUTES.clientes}`);
@@ -73,14 +55,14 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
             if (response.status === 401) throw new Error("401");
             if (!response.ok) throw new Error('No se pudieron cargar los clientes.');
             const clientesData: Cliente[] = await response.json();
+            await db.clientes.bulkPut(clientesData);
             setClientes(clientesData);
-            setItem('clientes', clientesData);
         } catch (error) {
             if (error instanceof Error && error.message === "401") {
                 toast({ variant: "destructive", title: "Sesión expirada" });
                 logout();
             } else {
-                console.error("Error fetching clientes:", error)
+                console.error("Error fetching clients:", error)
                 toast({ variant: "destructive", title: "Error al Cargar Clientes", description: "No se pudieron cargar los clientes. Intente sincronizar de nuevo." });
             }
         }
@@ -100,13 +82,20 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
           if (!productosRes.ok || !empresasRes.ok || !asesoresRes.ok) throw new Error('Error al sincronizar datos.');
     
           const productosData: Producto[] = await productosRes.json();
-          setProductos(productosData); setItem('productos', productosData);
-          const empresasData: Empresa[] = await empresasRes.json();
-          setEmpresas(empresasData); setItem('empresas', empresasData);
-          const asesoresData: Asesor[] = await asesoresRes.json();
-          setAsesores(asesoresData); setItem('asesores', asesoresData);
+          await db.productos.bulkPut(productosData);
+          setProductos(productosData);
           
-          const localAsesor = getItem<Asesor>('asesor');
+          const empresasData: Empresa[] = await empresasRes.json();
+          await db.empresas.bulkPut(empresasData);
+          setEmpresas(empresasData);
+
+          const asesoresData: Asesor[] = await asesoresRes.json();
+          await db.asesores.bulkPut(asesoresData);
+          setAsesores(asesoresData);
+          
+          const configAsesor = await db.config.get('asesor');
+          const localAsesor = configAsesor?.value as Asesor | null;
+
           if(localAsesor) {
             const freshAsesor = asesoresData.find(a => a.idAsesor === localAsesor.idAsesor);
             if (freshAsesor) await fetchClientesForAsesor(freshAsesor.idAsesor);
@@ -124,9 +113,9 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       }, [token, toast, logout, fetchClientesForAsesor]);
 
 
-    const setAsesor = useCallback((asesorToSet: Asesor) => {
+    const setAsesor = useCallback(async (asesorToSet: Asesor) => {
         setAsesorState(asesorToSet);
-        setItem('asesor', asesorToSet);
+        await db.config.put({ key: 'asesor', value: asesorToSet });
         if (token) {
             fetchClientesForAsesor(asesorToSet.idAsesor);
         }
@@ -134,7 +123,6 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
 
     useEffect(() => {
         const loadAppData = async () => {
-            // Only proceed if authentication is resolved and user is logged in
             if (!user || !token) {
                 setIsDataLoading(false);
                 return;
@@ -142,30 +130,34 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
 
             setIsDataLoading(true);
 
-            const cachedAsesor = getItem<Asesor>('asesor');
-            const cachedEmpresa = getItem<Empresa>('empresa');
-            const cachedproductos = getItem<Producto[]>('productos') || [];
-            const cachedEmpresas = getItem<Empresa[]>('empresas') || [];
-            const cachedAsesores = getItem<Asesor[]>('asesores') || [];
-            const cachedClientes = getItem<Cliente[]>('clientes') || [];
+            const [configAsesor, configEmpresa, cachedProductos, cachedEmpresas, cachedAsesores, cachedClientes] = await Promise.all([
+                db.config.get('asesor'),
+                db.config.get('empresa'),
+                db.productos.toArray(),
+                db.empresas.toArray(),
+                db.asesores.toArray(),
+                db.clientes.toArray(),
+            ]);
+
+            const cachedAsesor = configAsesor?.value as Asesor | null;
+            const cachedEmpresa = configEmpresa?.value as Empresa | null;
 
             setAsesorState(cachedAsesor);
             setSelectedEmpresaState(cachedEmpresa);
-            setProductos(cachedproductos);
+            setProductos(cachedProductos);
             setEmpresas(cachedEmpresas);
             setAsesores(cachedAsesores);
             setClientes(cachedClientes);
             
-            if (cachedproductos.length === 0 || cachedEmpresas.length === 0 || cachedAsesores.length === 0) {
+            if (cachedProductos.length === 0 || cachedEmpresas.length === 0 || cachedAsesores.length === 0) {
                 await syncData();
             }
 
-            // After potential sync, re-read asesores from localStorage to perform user-role specific logic
-            const allAsesores = getItem<Asesor[]>('asesores') || [];
+            const allAsesores = await db.asesores.toArray();
             if (user.idRol !== 'admin' && allAsesores.length > 0 && !cachedAsesor) {
                 const match = allAsesores.find(a => a.idAsesor.toLowerCase() === user.username.toLowerCase());
                 if (match) {
-                    setAsesor(match); // This will also save to localStorage and fetch clientes
+                    await setAsesor(match);
                 }
             } else if (cachedAsesor && cachedClientes.length === 0) {
                 await fetchClientesForAsesor(cachedAsesor.idAsesor);
@@ -174,30 +166,28 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
             setIsDataLoading(false);
         };
         
-        // Wait until the authentication process is complete before trying to load data
         if (!isAuthLoading) {
             loadAppData();
         }
     }, [user, token, isAuthLoading, syncData, fetchClientesForAsesor, setAsesor]);
 
-    const setEmpresa = (empresaToSet: Empresa) => {
+    const setEmpresa = async (empresaToSet: Empresa) => {
         setSelectedEmpresaState(empresaToSet);
-        setItem('empresa', empresaToSet);
+        await db.config.put({ key: 'empresa', value: empresaToSet });
     };
 
-    const updateEmpresaInState = (updatedEmpresa: Empresa) => {
+    const updateEmpresaInState = async (updatedEmpresa: Empresa) => {
         const updatedEmpresas = empresas.map(e => e.idEmpresa === updatedEmpresa.idEmpresa ? updatedEmpresa : e);
         setEmpresas(updatedEmpresas);
-        setItem('empresas', updatedEmpresas);
+        await db.empresas.bulkPut(updatedEmpresas);
         if (selectedEmpresa?.idEmpresa === updatedEmpresa.idEmpresa) {
-            setEmpresa(updatedEmpresa);
+            await setEmpresa(updatedEmpresa);
         }
     };
     
     const findAndReserveNextPedidoId = useCallback(async (): Promise<string | null> => {
         if (!token || !selectedEmpresa) return null;
     
-        // We assume selectedEmpresa.idPedido is the last *used* ID. We start checking from the next one.
         let currentIdToTry = selectedEmpresa.idPedido + 1;
         let attempts = 0;
         const MAX_ATTEMPTS = 50;
@@ -217,13 +207,12 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
                     headers: { Authorization: `Bearer ${token}` },
                 });
     
-                if (checkResponse.ok) { // This ID EXISTS, so we try the next one.
+                if (checkResponse.ok) {
                     currentIdToTry++;
                     continue;
                 }
     
-                if (checkResponse.status === 404) { // This ID IS FREE. Let's reserve and use it.
-                    // We update the company counter to the ID we are about to use.
+                if (checkResponse.status === 404) {
                     const updateResponse = await fetch(`${API_BASE_URL}${API_ROUTES.updateEmpresaPedido}${selectedEmpresa.idEmpresa}`, {
                         method: 'PUT',
                         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
@@ -232,17 +221,14 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     
                     if (updateResponse.ok) {
                         const updatedEmpresa = await updateResponse.json();
-                        updateEmpresaInState(updatedEmpresa);
-                        return candidateId; // Return the successfully reserved ID.
+                        await updateEmpresaInState(updatedEmpresa);
+                        return candidateId;
                     } else {
-                        // CRITICAL FAILURE: The counter update failed. This could be a race condition.
-                        // We must stop to avoid creating an inconsistent state.
                         toast({ variant: 'destructive', title: 'Error Crítico', description: `Se encontró el ID ${candidateId} libre, pero no se pudo actualizar el contador. Reintente.` });
                         return null;
                     }
                 }
                 
-                // Any other server error during check
                 toast({ variant: 'destructive', title: 'Error de Red', description: `No se pudo verificar el ID del pedido. (Estatus: ${checkResponse.status})` });
                 return null;
     

@@ -13,17 +13,17 @@ interface PedidoShareImageProps {
 }
 
 export function PedidoShareImage({ pedido }: PedidoShareImageProps) {
-  const { asesor, clients, products, selectedEmpresa } = useData();
+  const { asesor, clientes, productos, selectedEmpresa } = useData();
   const logo = PlaceHolderImages.find(img => img.id === 'logo');
 
-  const cliente = clients.find(c => c.idCliente === pedido.idCliente);
+  const cliente = clientes.find(c => c.idCliente === pedido.idCliente);
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value);
   };
 
   const getProducto = (idProducto: string): Producto | undefined => {
-    return products.find(p => p.idProducto === idProducto);
+    return productos.find(p => p.idProducto === idProducto);
   };
 
   return (

@@ -32,7 +32,7 @@ interface PedidoFormProps {
 }
 
 export function PedidoForm({ mode, initialPedido, idPedidoGenerado, onSave, isSaving }: PedidoFormProps) {
-    const { clients, products, selectedEmpresa, asesor: loggedInAsesor, asesores } = useData();
+    const { clientes, productos, selectedEmpresa, asesor: loggedInAsesor, asesores } = useData();
     const { toast } = useToast();
 
     const isViewMode = mode === 'consultar';
@@ -44,7 +44,7 @@ export function PedidoForm({ mode, initialPedido, idPedidoGenerado, onSave, isSa
         if (initialPedido) {
             setSelectedClientId(initialPedido.idCliente);
             const lineas = initialPedido.detalles.map(detalle => {
-                const producto = products.find(p => p.idProducto === detalle.idProducto);
+                const producto = productos.find(p => p.idProducto === detalle.idProducto);
                 return {
                   id: detalle.id,
                   producto: producto || { 
@@ -57,7 +57,7 @@ export function PedidoForm({ mode, initialPedido, idPedidoGenerado, onSave, isSa
             });
             setLineasPedido(lineas);
         }
-    }, [initialPedido, products]);
+    }, [initialPedido, productos]);
     
     // Client Combobox states
     const [clientPopoverOpen, setClientPopoverOpen] = useState(false);
@@ -65,22 +65,22 @@ export function PedidoForm({ mode, initialPedido, idPedidoGenerado, onSave, isSa
 
     const filteredClients = useMemo(() => {
         if (!loggedInAsesor) return [];
-        const allAsesorClients = clients.filter(c => c.idAsesor === loggedInAsesor.idAsesor);
+        const allAsesorClients = clientes.filter(c => c.idAsesor === loggedInAsesor.idAsesor);
         if (!clientSearch) return allAsesorClients;
         return allAsesorClients.filter(c => 
             c.Cliente.toLowerCase().includes(clientSearch.toLowerCase()) || 
             c.Rif.toLowerCase().includes(clientSearch.toLowerCase())
         );
-    }, [clients, loggedInAsesor, clientSearch]);
+    }, [clientes, loggedInAsesor, clientSearch]);
 
     // Product Combobox states
     const [productPopoverOpen, setProductPopoverOpen] = useState(false);
     const [productSearch, setProductSearch] = useState("");
 
     const filteredProducts = useMemo(() => {
-        if (!productSearch) return products;
-        return products.filter(p => p.Producto.toLowerCase().includes(productSearch.toLowerCase()));
-    }, [products, productSearch]);
+        if (!productSearch) return productos;
+        return productos.filter(p => p.Producto.toLowerCase().includes(productSearch.toLowerCase()));
+    }, [productos, productSearch]);
 
     const handleAddProducto = (producto: Producto) => {
         setLineasPedido(currentLineas => {
@@ -170,8 +170,8 @@ export function PedidoForm({ mode, initialPedido, idPedidoGenerado, onSave, isSa
 
     const selectedClient = useMemo(() => {
         if (!selectedClientId) return null;
-        return clients.find(c => c.idCliente === selectedClientId) ?? null;
-      }, [selectedClientId, clients]);
+        return clientes.find(c => c.idCliente === selectedClientId) ?? null;
+      }, [selectedClientId, clientes]);
     
     const pedidoAsesor = useMemo(() => {
         if (mode !== 'nuevo' && initialPedido) {

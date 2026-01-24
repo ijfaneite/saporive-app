@@ -15,7 +15,7 @@ import { PlaceHolderImages } from '@/lib/placeholder-images';
 
 export default function ImprimirPedidoPage() {
   const { token, logout, isLoading: isAuthLoading } = useAuth();
-  const { asesor, clients, products, selectedEmpresa } = useData();
+  const { asesor, clientes, productos, selectedEmpresa } = useData();
   const params = useParams();
   const { toast } = useToast();
   const logo = PlaceHolderImages.find(img => img.id === 'logo');
@@ -86,15 +86,15 @@ export default function ImprimirPedidoPage() {
 
   const cliente = useMemo(() => {
     if (!pedido) return null;
-    return clients.find(c => c.idCliente === pedido.idCliente);
-  }, [pedido, clients]);
+    return clientes.find(c => c.idCliente === pedido.idCliente);
+  }, [pedido, clientes]);
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value);
   };
   
   const getProducto = (idProducto: string): Producto | undefined => {
-      return products.find(p => p.idProducto === idProducto);
+      return productos.find(p => p.idProducto === idProducto);
   }
 
   if (isLoading || isAuthLoading || !pedido) {

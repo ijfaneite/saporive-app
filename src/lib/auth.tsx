@@ -35,24 +35,6 @@ const eraseCookie = (name: string) => {
     }
 }
 
-const setItem = (key: string, value: any) => {
-    if (typeof localStorage !== 'undefined') {
-        localStorage.setItem(key, JSON.stringify(value));
-    }
-}
-
-const getItem = <T>(key: string): T | null => {
-    if (typeof localStorage === 'undefined') return null;
-    const storedValue = localStorage.getItem(key);
-    if (!storedValue) return null;
-    try {
-        return JSON.parse(storedValue) as T;
-    } catch (error) {
-        localStorage.removeItem(key);
-        return null;
-    }
-}
-
 interface AuthContextType {
   user: User | null;
   token: string | null;
@@ -70,17 +52,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const router = useRouter();
 
   useEffect(() => {
-    const storedToken = getCookie('auth_token');
-    if (storedToken) {
-        const storedUser = getItem<User>('user');
-        if (storedUser) {
-            setUser(storedUser);
-            setToken(storedToken);
-        } else {
-            eraseCookie('auth_token');
+    const loadSession = async () => {
+        const storedToken = getCookie('auth_token');
+        if (storedToken) {
+            const storedUser = await db.user.limit(1).first();
+            if (storedUser) {
+                setUser(storedUser);
+                setToken(storedToken);
+            } else {
+                eraseCookie('auth_token');
+            }
         }
+        setIsLoading(false);
     }
-    setIsLoading(false);
+    loadSession();
   }, []);
 
   const login = async (username: string, password: string) => {
@@ -114,11 +99,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     
     const userData: User = await userResponse.json();
 
-    localStorage.clear();
-    await db.localPedidos.clear();
+    await db.clearAllData();
 
     setCookie('auth_token', access_token, 7);
-    setItem('user', userData);
+    await db.user.put(userData);
     
     setUser(userData);
     setToken(access_token);
@@ -129,8 +113,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setToken(null);
     setUser(null);
     eraseCookie('auth_token');
-    localStorage.clear();
-    await db.localPedidos.clear();
+    await db.clearAllData();
     router.push('/login');
   }, [router]);
 

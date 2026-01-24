@@ -14,7 +14,7 @@ import { PedidoForm } from '@/components/PedidoForm';
 
 export default function EditarPedidoPage() {
   const { token, logout } = useAuth();
-  const { products } = useData();
+  const { productos } = useData();
   const router = useRouter();
   const params = useParams();
   const { toast } = useToast();
@@ -26,7 +26,7 @@ export default function EditarPedidoPage() {
   const orderId = params.id as string;
 
   useEffect(() => {
-    if (!orderId || !token || !products.length) return;
+    if (!orderId || !token || !productos.length) return;
 
     const fetchPedido = async () => {
       setIsLoading(true);
@@ -56,7 +56,7 @@ export default function EditarPedidoPage() {
     };
 
     fetchPedido();
-  }, [orderId, token, products, router, toast, logout]);
+  }, [orderId, token, productos, router, toast, logout]);
 
   const handleUpdatePedido = async (pedidoPayload: PedidoCreatePayload) => {
     if (!token) {
