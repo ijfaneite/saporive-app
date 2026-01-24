@@ -30,8 +30,8 @@ const getItem = <T>(key: string): T | null => {
 interface DataContextType {
     asesor: Asesor | null;
     asesores: Asesor[];
-    clients: Cliente[];
-    products: Producto[];
+    clientes: Cliente[];
+    productos: Producto[];
     empresas: Empresa[];
     selectedEmpresa: Empresa | null;
     localPedidos: Pedido[];
@@ -55,8 +55,8 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
 
     const [asesor, setAsesorState] = useState<Asesor | null>(null);
     const [asesores, setAsesores] = useState<Asesor[]>([]);
-    const [clients, setClients] = useState<Cliente[]>([]);
-    const [products, setProducts] = useState<Producto[]>([]);
+    const [clientes, setClientes] = useState<Cliente[]>([]);
+    const [productos, setProductos] = useState<Producto[]>([]);
     const [empresas, setEmpresas] = useState<Empresa[]>([]);
     const [selectedEmpresa, setSelectedEmpresaState] = useState<Empresa | null>(null);
     const [isDataLoading, setIsDataLoading] = useState(true);
@@ -64,7 +64,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     const [localPedidos, setLocalPedidos] = useState<Pedido[]>([]);
     const [isSyncingLocal, setIsSyncingLocal] = useState(false);
 
-    const fetchClientsForAsesor = useCallback(async (asesorId: string) => {
+    const fetchclientesForAsesor = useCallback(async (asesorId: string) => {
         if (!token) return;
         try {
             const url = new URL(`${API_BASE_URL}${API_ROUTES.clientes}`);
@@ -73,14 +73,14 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
             if (response.status === 401) throw new Error("401");
             if (!response.ok) throw new Error('No se pudieron cargar los clientes.');
             const clientesData: Cliente[] = await response.json();
-            setClients(clientesData);
-            setItem('clients', clientesData);
+            setClientes(clientesData);
+            setItem('clientes', clientesData);
         } catch (error) {
             if (error instanceof Error && error.message === "401") {
                 toast({ variant: "destructive", title: "Sesión expirada" });
                 logout();
             } else {
-                console.error("Error fetching clients:", error)
+                console.error("Error fetching clientes:", error)
                 toast({ variant: "destructive", title: "Error al Cargar Clientes", description: "No se pudieron cargar los clientes. Intente sincronizar de nuevo." });
             }
         }
@@ -100,7 +100,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
           if (!productosRes.ok || !empresasRes.ok || !asesoresRes.ok) throw new Error('Error al sincronizar datos.');
     
           const productosData: Producto[] = await productosRes.json();
-          setProducts(productosData); setItem('products', productosData);
+          setProductos(productosData); setItem('productos', productosData);
           const empresasData: Empresa[] = await empresasRes.json();
           setEmpresas(empresasData); setItem('empresas', empresasData);
           const asesoresData: Asesor[] = await asesoresRes.json();
@@ -109,7 +109,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
           const localAsesor = getItem<Asesor>('asesor');
           if(localAsesor) {
             const freshAsesor = asesoresData.find(a => a.idAsesor === localAsesor.idAsesor);
-            if (freshAsesor) await fetchClientsForAsesor(freshAsesor.idAsesor);
+            if (freshAsesor) await fetchClientesForAsesor(freshAsesor.idAsesor);
           }
         } catch (error) {
           if (error instanceof Error && error.message === "401") {
@@ -121,16 +121,16 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         } finally {
           setIsSyncing(false);
         }
-      }, [token, toast, logout, fetchClientsForAsesor]);
+      }, [token, toast, logout, fetchClientesForAsesor]);
 
 
     const setAsesor = useCallback((asesorToSet: Asesor) => {
         setAsesorState(asesorToSet);
         setItem('asesor', asesorToSet);
         if (token) {
-            fetchClientsForAsesor(asesorToSet.idAsesor);
+            fetchClientesForAsesor(asesorToSet.idAsesor);
         }
-    }, [token, fetchClientsForAsesor]);
+    }, [token, fetchClientesForAsesor]);
 
     useEffect(() => {
         const loadAppData = async () => {
@@ -144,19 +144,19 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
 
             const cachedAsesor = getItem<Asesor>('asesor');
             const cachedEmpresa = getItem<Empresa>('empresa');
-            const cachedProducts = getItem<Producto[]>('products') || [];
+            const cachedproductos = getItem<Producto[]>('productos') || [];
             const cachedEmpresas = getItem<Empresa[]>('empresas') || [];
             const cachedAsesores = getItem<Asesor[]>('asesores') || [];
-            const cachedClients = getItem<Cliente[]>('clients') || [];
+            const cachedClientes = getItem<Cliente[]>('clientes') || [];
 
             setAsesorState(cachedAsesor);
             setSelectedEmpresaState(cachedEmpresa);
-            setProducts(cachedProducts);
+            setProductos(cachedproductos);
             setEmpresas(cachedEmpresas);
             setAsesores(cachedAsesores);
-            setClients(cachedClients);
+            setClientes(cachedClientes);
             
-            if (cachedProducts.length === 0 || cachedEmpresas.length === 0 || cachedAsesores.length === 0) {
+            if (cachedproductos.length === 0 || cachedEmpresas.length === 0 || cachedAsesores.length === 0) {
                 await syncData();
             }
 
@@ -165,10 +165,10 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
             if (user.idRol !== 'admin' && allAsesores.length > 0 && !cachedAsesor) {
                 const match = allAsesores.find(a => a.idAsesor.toLowerCase() === user.username.toLowerCase());
                 if (match) {
-                    setAsesor(match); // This will also save to localStorage and fetch clients
+                    setAsesor(match); // This will also save to localStorage and fetch clientes
                 }
-            } else if (cachedAsesor && cachedClients.length === 0) {
-                await fetchClientsForAsesor(cachedAsesor.idAsesor);
+            } else if (cachedAsesor && cachedClientes.length === 0) {
+                await fetchClientesForAsesor(cachedAsesor.idAsesor);
             }
             
             setIsDataLoading(false);
@@ -178,7 +178,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         if (!isAuthLoading) {
             loadAppData();
         }
-    }, [user, token, isAuthLoading, syncData, fetchClientsForAsesor, setAsesor]);
+    }, [user, token, isAuthLoading, syncData, fetchClientesForAsesor, setAsesor]);
 
     const setEmpresa = (empresaToSet: Empresa) => {
         setSelectedEmpresaState(empresaToSet);
@@ -381,7 +381,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
 
     return (
         <DataContext.Provider value={{ 
-            asesor, asesores, clients, products, empresas, selectedEmpresa, localPedidos, 
+            asesor, asesores, clientes, productos, empresas, selectedEmpresa, localPedidos, 
             setAsesor, setEmpresa, updateEmpresaInState, syncData, addLocalPedido, 
             findAndReserveNextPedidoId,
             isSyncing, isSyncingLocal, isDataLoading
