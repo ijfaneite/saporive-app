@@ -35,6 +35,7 @@ interface DataContextType {
     empresas: Empresa[];
     selectedEmpresa: Empresa | null;
     localPedidos: Pedido[];
+    findAndReserveNextPedidoId: () => Promise<string | null>;
     setAsesor: (asesor: Asesor) => void;
     setEmpresa: (empresa: Empresa) => void;
     updateEmpresaInState: (empresa: Empresa) => void;
@@ -209,12 +210,12 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
                     headers: { Authorization: `Bearer ${token}` },
                 });
 
-                if (checkResponse.ok) {
+                if (checkResponse.ok) { // This means the ID EXISTS, try the next one.
                     nextIdPedidoToTry++;
                     continue;
                 }
 
-                if (checkResponse.status === 404) {
+                if (checkResponse.status === 404) { // This means the ID is FREE. Let's try to reserve it.
                     const newCounterValue = nextIdPedidoToTry + 1;
                     const updateResponse = await fetch(`${API_BASE_URL}${API_ROUTES.updateEmpresaPedido}${selectedEmpresa.idEmpresa}`, {
                         method: 'PUT',
@@ -226,13 +227,16 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
                         const updatedEmpresa = await updateResponse.json();
                         updateEmpresaInState(updatedEmpresa);
                         return candidateId;
-                    } else {
-                         nextIdPedidoToTry++;
-                         continue;
+                    } else { 
+                        // CRITICAL FAILURE: The counter update failed. We must stop.
+                        // Continuing would cause a gap in the sequence.
+                        toast({ variant: 'destructive', title: 'Error Crítico', description: `Se encontró el ID ${candidateId} libre, pero no se pudo actualizar el contador en el servidor. Reintente.` });
+                        return null;
                     }
                 }
                 
-                toast({ variant: 'destructive', title: 'Error de Red', description: 'No se pudo verificar el ID del pedido.' });
+                // Any other error from server during check
+                toast({ variant: 'destructive', title: 'Error de Red', description: `No se pudo verificar el ID del pedido. (Estatus: ${checkResponse.status})` });
                 return null;
 
             } catch (error) {
@@ -372,6 +376,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         <DataContext.Provider value={{ 
             asesor, asesores, clients, products, empresas, selectedEmpresa, localPedidos, 
             setAsesor, setEmpresa, updateEmpresaInState, syncData, addLocalPedido, 
+            findAndReserveNextPedidoId,
             isSyncing, isSyncingLocal, isDataLoading
         }}>
             {children}
