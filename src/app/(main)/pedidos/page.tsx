@@ -29,13 +29,15 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { filterPedidosByTerm } from '@/lib/filter-config';
+import { useApiStatus } from '@/hooks/use-api-status';
 
 
 export default function PedidosPage() {
   const { token, logout } = useAuth();
-  const { asesor, clientes, pedidosLocales, isSyncingLocal } = useData();
+  const { asesor, clientes, pedidosLocales, isSyncingLocal, syncLocalPedidos } = useData();
   const { toast } = useToast();
   const router = useRouter();
+  const isOnline = useApiStatus();
 
   const [pedidos, setPedidos] = useState<Pedido[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -267,6 +269,11 @@ export default function PedidosPage() {
     return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value);
   }
 
+  const handleSyncLocal = useCallback(async () => {
+    await syncLocalPedidos();
+    handleRefresh();
+  }, [syncLocalPedidos, handleRefresh]);
+
   return (
     <div className="p-4 space-y-6 flex flex-col h-full">
       <div className="flex justify-between items-center flex-shrink-0">
@@ -283,6 +290,23 @@ export default function PedidosPage() {
             </Link>
         </div>
       </div>
+
+      {pedidosLocales.length > 0 && isOnline && (
+        <Card className="border-primary/50 bg-primary/10">
+          <CardContent className="p-3 flex items-center justify-between gap-4">
+            <div className='space-y-1'>
+              <p className="font-bold text-primary">Pedidos locales pendientes</p>
+              <p className="text-sm text-foreground/80">
+                Tiene {pedidosLocales.length} pedido(s) guardado(s) localmente.
+              </p>
+            </div>
+            <Button onClick={handleSyncLocal} disabled={isSyncingLocal}>
+              <RefreshCw className={cn("mr-2 h-4 w-4", isSyncingLocal && "animate-spin")} />
+              {isSyncingLocal ? 'Sincronizando...' : 'Sincronizar'}
+            </Button>
+          </CardContent>
+        </Card>
+      )}
 
       <div className="relative flex-shrink-0">
         <Input 

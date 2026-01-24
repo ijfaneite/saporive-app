@@ -23,6 +23,7 @@ interface DataContextType {
     updateEmpresaInState: (empresa: Empresa) => Promise<void>;
     syncData: () => Promise<void>;
     addLocalPedido: (pedidoPayload: Omit<PedidoCreatePayload, 'idPedido' | 'fechaPedido' | 'Status'>) => Promise<void>;
+    syncLocalPedidos: () => Promise<void>;
     isSyncing: boolean;
     isSyncingLocal: boolean;
     isDataLoading: boolean;
@@ -191,6 +192,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     const findAndReserveNextPedidoId = useCallback(async (): Promise<string | null> => {
         if (!token || !selectedEmpresa || !isOnline) return null;
     
+        // We start checking from the last known ID + 1
         let nextIdCounter = selectedEmpresa.idPedido;
         let attempts = 0;
         const MAX_ATTEMPTS = 50;
@@ -216,37 +218,30 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
                     const updateResponse = await fetch(`${API_BASE_URL}${API_ROUTES.updateEmpresaPedido}${selectedEmpresa.idEmpresa}`, {
                         method: 'PUT',
                         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-                        body: JSON.stringify({ idPedido: nextIdCounter }), // Reserve the current counter
+                        body: JSON.stringify({ idPedido: nextIdCounter }),
                     });
     
                     if (updateResponse.ok) {
-                        // SUCCESS: The counter was updated on the server.
-                        // We will trust our own logic for the new state, not the server response body,
-                        // to prevent issues if the server increments the counter again in its response.
                         const newEmpresaState = { ...selectedEmpresa, idPedido: nextIdCounter };
                         await updateEmpresaInState(newEmpresaState);
                         
-                        return candidateId; // Return the reserved ID
+                        return candidateId;
                     } else {
-                        // Failed to update, likely a race condition where another user took the ID.
-                        // The loop will continue and try the next number.
                         toast({ variant: 'destructive', title: 'Error de Concurrencia', description: 'No se pudo reservar el ID. Reintentando con el siguiente número.' });
                         continue; 
                     }
                 } else if (checkResponse.ok) {
-                    // ID is taken, loop will continue and try the next number.
                     continue;
                 } else {
-                    // A different kind of network or server error occurred.
                     toast({ variant: 'destructive', title: 'Error de Red', description: `No se pudo verificar el ID del pedido. (Estatus: ${checkResponse.status})` });
-                    return null; // Hard stop
+                    return null;
                 }
     
             } catch (error) {
                 if (isOnline) {
                     toast({ variant: "destructive", title: "Error de Conexión", description: "No se pudo comunicar con el servidor para obtener un ID de pedido." });
                 }
-                return null; // Hard stop
+                return null;
             }
         }
     
@@ -299,11 +294,12 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     }, []);
     
     const syncLocalPedidos = useCallback(async () => {
+        if (!isOnline || !token) {
+            toast({ variant: "destructive", title: "Sin Conexión", description: "No se pueden sincronizar los pedidos locales." });
+            return;
+        }
         const pedidosToSync = await db.pedidos.where('isLocal').equals(1).toArray();
-        if (pedidosToSync.length === 0 || !isOnline || !token) return;
-
-        const confirmSync = window.confirm(`Tiene ${pedidosToSync.length} pedido(s) locales. ¿Desea sincronizarlos ahora?`);
-        if (!confirmSync) return;
+        if (pedidosToSync.length === 0) return;
     
         setIsSyncingLocal(true);
         toast({ title: 'Iniciando sincronización de pedidos locales...' });
@@ -313,7 +309,9 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         for (const localPedido of pedidosToSync) {
             try {
                 const reservedId = await findAndReserveNextPedidoId();
-                if (!reservedId) throw new Error(`No se pudo reservar un ID para el pedido ${localPedido.idPedido}`);
+                if (!reservedId) {
+                    throw new Error(`No se pudo reservar un ID para el pedido ${localPedido.idPedido}`);
+                }
                 
                 const pedidoPayload: PedidoCreatePayload = {
                   idPedido: reservedId, idEmpresa: localPedido.idEmpresa, fechaPedido: localPedido.fechaPedido,
@@ -331,7 +329,6 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
                 if (response.status === 401) throw new Error("401");
                 if (!response.ok) {
                     const errorData = await response.json().catch(() => ({}));
-                    console.error(`Error al sincronizar pedido ${localPedido.idPedido}: ${errorData.detail || 'Error desconocido'}`);
                     throw new Error(`Error al sincronizar pedido ${localPedido.idPedido}: ${errorData.detail || 'Error desconocido'}`);
                 }
                 
@@ -343,49 +340,31 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
                  if (error instanceof Error && error.message === "401") {
                     toast({ variant: "destructive", title: "Sesión expirada" });
                     logout();
-                    setIsSyncingLocal(false);
-                    return;
+                    break;
                 }
                 toast({ variant: "destructive", title: "Error de Sincronización", description: `Fallo al sincronizar pedido ${localPedido.idPedido}. Proceso detenido.` });
                 break;
             }
         }
     
-        const remainingLocalPedidos = await db.pedidos.where('isLocal').equals(1).toArray();
-        setPedidosLocales(remainingLocalPedidos);
+        await loadPedidosLocalesFromDb();
         setIsSyncingLocal(false);
 
         if (successCount > 0) {
             toast({ title: "Sincronización Completada", description: `${successCount} pedido(s) se han sincronizado.` });
         }
     
-    }, [isOnline, token, findAndReserveNextPedidoId, toast, logout]);
+    }, [isOnline, token, findAndReserveNextPedidoId, toast, logout, loadPedidosLocalesFromDb]);
 
     useEffect(() => {
         loadPedidosLocalesFromDb();
     }, [loadPedidosLocalesFromDb]);
-    
-    useEffect(() => {
-      const checkAndPromptSync = async () => {
-          if (isOnline) {
-              const count = await db.pedidos.where('isLocal').equals(1).count();
-              if (count > 0 && !isSyncingLocal) {
-                  syncLocalPedidos();
-              }
-          }
-      }
-      const interval = setInterval(checkAndPromptSync, 60000);
-      if(!isAuthLoading && user){
-        checkAndPromptSync();
-      }
-      return () => clearInterval(interval);
-    }, [isOnline, isSyncingLocal, syncLocalPedidos, isAuthLoading, user]);
 
     return (
         <DataContext.Provider value={{ 
             asesor, asesores, clientes, productos, empresas, selectedEmpresa, pedidosLocales, 
             setAsesor, setEmpresa, updateEmpresaInState, syncData, addLocalPedido, 
-            findAndReserveNextPedidoId,
+            findAndReserveNextPedidoId, syncLocalPedidos,
             isSyncing, isSyncingLocal, isDataLoading
         }}>
             {children}
