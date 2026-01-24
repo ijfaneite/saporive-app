@@ -20,7 +20,7 @@ interface DataContextType {
     findAndReserveNextPedidoId: () => Promise<string | null>;
     setAsesor: (asesor: Asesor) => void;
     setEmpresa: (empresa: Empresa) => void;
-    updateEmpresaInState: (empresa: Empresa) => void;
+    updateEmpresaInState: (empresa: Empresa) => Promise<void>;
     syncData: () => Promise<void>;
     addLocalPedido: (pedidoPayload: Omit<PedidoCreatePayload, 'idPedido' | 'fechaPedido' | 'Status'>) => Promise<void>;
     isSyncing: boolean;
@@ -47,7 +47,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     const [isSyncingLocal, setIsSyncingLocal] = useState(false);
 
     const fetchClientesForAsesor = useCallback(async (asesorId: string) => {
-        if (!token) return;
+        if (!token || !isOnline) return;
         try {
             const url = new URL(`${API_BASE_URL}${API_ROUTES.clientes}`);
             url.searchParams.append('id_asesor', asesorId);
@@ -61,15 +61,15 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
             if (error instanceof Error && error.message === "401") {
                 toast({ variant: "destructive", title: "Sesión expirada" });
                 logout();
-            } else {
+            } else if (isOnline) {
                 console.error("Error fetching clients:", error)
                 toast({ variant: "destructive", title: "Error al Cargar Clientes", description: "No se pudieron cargar los clientes. Intente sincronizar de nuevo." });
             }
         }
-    }, [token, toast, logout]);
+    }, [token, toast, logout, isOnline]);
     
     const syncData = useCallback(async () => {
-        if (!token) return;
+        if (!token || !isOnline) return;
         setIsSyncing(true);
         try {
           const responses = await Promise.all([
@@ -104,32 +104,33 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
           if (error instanceof Error && error.message === "401") {
             toast({ variant: "destructive", title: "Sesión expirada" });
             logout();
-          } else {
+          } else if (isOnline) {
             toast({ variant: "destructive", title: "Error de Sincronización", description: error instanceof Error ? error.message : "No se pudieron cargar los datos." });
           }
         } finally {
           setIsSyncing(false);
         }
-      }, [token, toast, logout, fetchClientesForAsesor]);
+      }, [token, toast, logout, fetchClientesForAsesor, isOnline]);
 
 
     const setAsesor = useCallback(async (asesorToSet: Asesor) => {
         setAsesorState(asesorToSet);
         await db.config.put({ key: 'asesor', value: asesorToSet });
-        if (token) {
-            fetchClientesForAsesor(asesorToSet.idAsesor);
+        if (token && isOnline) {
+            await fetchClientesForAsesor(asesorToSet.idAsesor);
         }
-    }, [token, fetchClientesForAsesor]);
+    }, [token, fetchClientesForAsesor, isOnline]);
 
     useEffect(() => {
         const loadAppData = async () => {
-            if (!user || !token) {
-                setIsDataLoading(false);
+            if (isAuthLoading || !user) {
+                if(!isAuthLoading) setIsDataLoading(false);
                 return;
             }
 
             setIsDataLoading(true);
 
+            // Step 1: Load all data from IndexedDB unconditionally.
             const [configAsesor, configEmpresa, cachedProductos, cachedEmpresas, cachedAsesores, cachedClientes] = await Promise.all([
                 db.config.get('asesor'),
                 db.config.get('empresa'),
@@ -139,37 +140,43 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
                 db.clientes.toArray(),
             ]);
 
-            const cachedAsesor = configAsesor?.value as Asesor | null;
-            const cachedEmpresa = configEmpresa?.value as Empresa | null;
+            const localAsesor = configAsesor?.value as Asesor | null;
+            const localEmpresa = configEmpresa?.value as Empresa | null;
 
-            setAsesorState(cachedAsesor);
-            setSelectedEmpresaState(cachedEmpresa);
+            // Step 2: Set the application state with the data from IndexedDB.
+            setAsesorState(localAsesor);
+            setSelectedEmpresaState(localEmpresa);
             setProductos(cachedProductos);
             setEmpresas(cachedEmpresas);
             setAsesores(cachedAsesores);
             setClientes(cachedClientes);
             
-            if (cachedProductos.length === 0 || cachedEmpresas.length === 0 || cachedAsesores.length === 0) {
-                await syncData();
+            // Step 3: If online, perform network operations (syncing, fetching missing data).
+            if (isOnline) {
+                const needsMasterSync = cachedProductos.length === 0 || cachedEmpresas.length === 0 || cachedAsesores.length === 0;
+                if (needsMasterSync) {
+                    await syncData();
+                } else if (localAsesor && cachedClientes.length === 0) {
+                    // if master data is present, just fetch clients if needed
+                    await fetchClientesForAsesor(localAsesor.idAsesor);
+                }
             }
 
-            const allAsesores = await db.asesores.toArray();
-            if (user.idRol !== 'admin' && allAsesores.length > 0 && !cachedAsesor) {
-                const match = allAsesores.find(a => a.idAsesor.toLowerCase() === user.username.toLowerCase());
+            // Step 4: Setup default advisor for non-admin users if not already configured.
+            // This logic runs with data from DB, regardless of online status.
+            const currentAsesores = await db.asesores.toArray();
+            if (user.idRol !== 'admin' && currentAsesores.length > 0 && !localAsesor) {
+                const match = currentAsesores.find(a => a.idAsesor.toLowerCase() === user.username.toLowerCase());
                 if (match) {
                     await setAsesor(match);
                 }
-            } else if (cachedAsesor && cachedClientes.length === 0) {
-                await fetchClientesForAsesor(cachedAsesor.idAsesor);
             }
             
             setIsDataLoading(false);
         };
         
-        if (!isAuthLoading) {
-            loadAppData();
-        }
-    }, [user, token, isAuthLoading, syncData, fetchClientesForAsesor, setAsesor]);
+        loadAppData();
+    }, [user, token, isAuthLoading, isOnline, syncData, fetchClientesForAsesor, setAsesor]);
 
     const setEmpresa = async (empresaToSet: Empresa) => {
         setSelectedEmpresaState(empresaToSet);
@@ -188,20 +195,19 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     const findAndReserveNextPedidoId = useCallback(async (): Promise<string | null> => {
         if (!token || !selectedEmpresa) return null;
     
-        let idCounter = selectedEmpresa.idPedido;
+        let nextIdCounter = selectedEmpresa.idPedido + 1;
         let attempts = 0;
         const MAX_ATTEMPTS = 50;
     
         while (attempts < MAX_ATTEMPTS) {
             attempts++;
-            idCounter++; 
             
             const date = new Date();
             const year = date.getFullYear();
             const month = String(date.getMonth() + 1).padStart(2, '0');
             const day = String(date.getDate()).padStart(2, '0');
-            const nextId = String(idCounter).padStart(3, '0');
-            const candidateId = `${year}${month}${day}-${nextId}`;
+            const nextIdStr = String(nextIdCounter).padStart(3, '0');
+            const candidateId = `${year}${month}${day}-${nextIdStr}`;
     
             try {
                 const checkResponse = await fetch(`${API_BASE_URL}${API_ROUTES.pedidos}${candidateId}`, {
@@ -212,7 +218,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
                     const updateResponse = await fetch(`${API_BASE_URL}${API_ROUTES.updateEmpresaPedido}${selectedEmpresa.idEmpresa}`, {
                         method: 'PUT',
                         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-                        body: JSON.stringify({ idPedido: idCounter }),
+                        body: JSON.stringify({ idPedido: nextIdCounter }),
                     });
     
                     if (updateResponse.ok) {
@@ -220,9 +226,13 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
                         await updateEmpresaInState(updatedEmpresa);
                         return candidateId;
                     } else {
+                        toast({ variant: 'destructive', title: 'Error de Servidor', description: 'No se pudo actualizar el correlativo del pedido en el servidor. Reintentando...' });
+                        await new Promise(resolve => setTimeout(resolve, 500));
+                        nextIdCounter++;
                         continue;
                     }
                 } else if (checkResponse.ok) {
+                    nextIdCounter++;
                     continue;
                 }
                 
@@ -243,7 +253,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         pedidoPayload: Omit<PedidoCreatePayload, 'idPedido' | 'fechaPedido' | 'Status'>
     ) => {
         if (!user) return;
-        const allLocalPedidos = await db.pedidos.where('idPedido').startsWith('L-').toArray();
+        const allLocalPedidos = await db.pedidos.where('isLocal').equals(1).toArray();
         const lastIdNum = allLocalPedidos.reduce((max, p) => {
             try {
                 const num = parseInt(p.idPedido.split('-')[1]);
@@ -360,9 +370,11 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
           }
       }
       const interval = setInterval(checkAndPromptSync, 60000);
-      checkAndPromptSync();
+      if(!isAuthLoading && user){
+        checkAndPromptSync();
+      }
       return () => clearInterval(interval);
-    }, [isOnline, isSyncingLocal, syncLocalPedidos]);
+    }, [isOnline, isSyncingLocal, syncLocalPedidos, isAuthLoading, user]);
 
     return (
         <DataContext.Provider value={{ 
@@ -381,3 +393,5 @@ export const useData = () => {
     if (context === undefined) throw new Error('useData must be used within a DataProvider');
     return context;
 };
+
+    
