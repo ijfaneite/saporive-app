@@ -160,20 +160,12 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
                     await fetchClientesForAsesor(localAsesor.idAsesor);
                 }
             }
-
-            // Step 4: Setup default advisor for non-admin users if not already configured.
-            if (user.idRol !== 'admin' && cachedAsesores.length > 0 && !localAsesor) {
-                const match = cachedAsesores.find(a => a.idAsesor.toLowerCase() === user.username.toLowerCase());
-                if (match) {
-                    await setAsesor(match);
-                }
-            }
             
             setIsDataLoading(false);
         };
         
         loadAppData();
-    }, [user, isAuthLoading, isOnline, syncData, fetchClientesForAsesor, setAsesor]);
+    }, [user, isAuthLoading, isOnline, syncData, fetchClientesForAsesor]);
 
     const setEmpresa = async (empresaToSet: Empresa) => {
         setSelectedEmpresaState(empresaToSet);
@@ -192,13 +184,12 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     const findAndReserveNextPedidoId = useCallback(async (): Promise<string | null> => {
         if (!token || !selectedEmpresa || !isOnline) return null;
     
-        // We start checking from the last known ID + 1
         let nextIdCounter = selectedEmpresa.idPedido;
         let attempts = 0;
         const MAX_ATTEMPTS = 50;
     
         while (attempts < MAX_ATTEMPTS) {
-            nextIdCounter++; // Increment to get the next candidate
+            nextIdCounter++; 
             attempts++;
             
             const date = new Date();
@@ -214,7 +205,6 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
                 });
     
                 if (checkResponse.status === 404) {
-                    // ID is available, now try to reserve it by updating the main counter
                     const updateResponse = await fetch(`${API_BASE_URL}${API_ROUTES.updateEmpresaPedido}${selectedEmpresa.idEmpresa}`, {
                         method: 'PUT',
                         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
@@ -222,9 +212,8 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
                     });
     
                     if (updateResponse.ok) {
-                        const newEmpresaState = { ...selectedEmpresa, idPedido: nextIdCounter };
-                        await updateEmpresaInState(newEmpresaState);
-                        
+                        const updatedEmpresa = { ...selectedEmpresa, idPedido: nextIdCounter };
+                        await updateEmpresaInState(updatedEmpresa);
                         return candidateId;
                     } else {
                         toast({ variant: 'destructive', title: 'Error de Concurrencia', description: 'No se pudo reservar el ID. Reintentando con el siguiente número.' });

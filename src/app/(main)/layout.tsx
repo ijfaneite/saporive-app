@@ -9,7 +9,7 @@ import { Loader2 } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 
 export default function MainLayout({ children }: { children: React.ReactNode }) {
-  const { isLoading: isAuthLoading, user } = useAuth();
+  const { isLoading: isAuthLoading } = useAuth();
   const { isDataLoading, asesor, selectedEmpresa } = useData();
   const pathname = usePathname();
 
@@ -28,7 +28,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
     );
   }
 
-  const showSetupModal = (user && !selectedEmpresa) || (user?.idRol === 'admin' && !asesor);
+  const showSetupModal = !selectedEmpresa || !asesor;
 
   return (
     <div className="bg-gray-200 dark:bg-gray-900 min-h-screen flex items-center justify-center font-body">

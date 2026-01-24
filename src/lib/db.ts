@@ -29,14 +29,12 @@ export class AppDatabase extends Dexie {
   }
 
   async clearAllData() {
+    // We only clear tables that contain user-specific transactional data or session info.
+    // Master data (productos, clientes, etc.) and selected configuration (empresa, asesor)
+    // are kept to allow for offline access and persistence between sessions as requested.
     await Promise.all([
-      this.pedidos.clear(),
-      this.user.clear(),
-      this.asesores.clear(),
-      this.productos.clear(),
-      this.clientes.clear(),
-      this.empresas.clear(),
-      this.config.clear(),
+      this.pedidos.clear(), // Clears local and synced orders from previous session
+      this.user.clear(),     // Clears previous user object
     ]);
   }
 }
