@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from 'react';
-import { useAuth } from '@/lib/auth';
+import { useData } from '@/lib/data-provider';
 import { Button } from '@/components/ui/button';
 import {
   Select,
@@ -13,7 +13,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 
 export function EmpresaSelector() {
-  const { empresas, setEmpresa, selectedEmpresa } = useAuth();
+  const { empresas, setEmpresa, selectedEmpresa } = useData();
   const [selectedEmpresaId, setSelectedEmpresaId] = useState<string | undefined>(selectedEmpresa?.idEmpresa.toString());
   const { toast } = useToast();
 

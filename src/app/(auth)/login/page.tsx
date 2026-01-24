@@ -28,7 +28,7 @@ const formSchema = z.object({
 export default function LoginPage() {
   const { login } = useAuth();
   const { toast } = useToast();
-  const [isLoading, setIsLoading] = React.useState(false);
+  const [isLoggingIn, setIsLoggingIn] = React.useState(false);
   
   const logo = PlaceHolderImages.find(img => img.id === 'logo');
 
@@ -41,7 +41,7 @@ export default function LoginPage() {
   });
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
-    setIsLoading(true);
+    setIsLoggingIn(true);
     try {
       await login(values.username, values.password);
     } catch (error) {
@@ -50,7 +50,7 @@ export default function LoginPage() {
         title: "Error de inicio de sesión",
         description: error instanceof Error ? error.message : "Ha ocurrido un error inesperado.",
       });
-      setIsLoading(false);
+      setIsLoggingIn(false);
     }
   }
 
@@ -100,8 +100,8 @@ export default function LoginPage() {
                 </FormItem>
               )}
             />
-            <Button type="submit" className="w-full font-bold" disabled={isLoading}>
-              {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            <Button type="submit" className="w-full font-bold" disabled={isLoggingIn}>
+              {isLoggingIn && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Iniciar Sesión
             </Button>
           </form>

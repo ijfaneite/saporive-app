@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useMemo } from 'react';
-import { useAuth } from '@/lib/auth';
+import { useData } from '@/lib/data-provider';
 import {
   Table,
   TableBody,
@@ -16,7 +16,7 @@ import { Button } from '@/components/ui/button';
 import { filterProductosByTerm } from '@/lib/filter-config';
 
 export default function PreciosPage() {
-  const { products, isLoading: isAuthLoading } = useAuth();
+  const { products, isDataLoading } = useData();
   const [searchTerm, setSearchTerm] = useState('');
 
   const filteredProductos = useMemo(() => {
@@ -49,7 +49,7 @@ export default function PreciosPage() {
         )}
       </div>
       <div className="border rounded-lg">
-        {isAuthLoading ? (
+        {isDataLoading ? (
           <div className="flex items-center justify-center h-64">
             <Loader2 className="w-8 h-8 animate-spin text-primary" />
           </div>

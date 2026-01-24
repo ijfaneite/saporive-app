@@ -2,12 +2,14 @@
 
 import Image from 'next/image';
 import { useAuth } from '@/lib/auth';
+import { useData } from '@/lib/data-provider';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { User, Building2 } from 'lucide-react';
 import { ApiStatus } from './ApiStatus';
 
 export function Header() {
-  const { selectedEmpresa, user, asesor } = useAuth();
+  const { user } = useAuth();
+  const { selectedEmpresa, asesor } = useData();
   const logo = PlaceHolderImages.find(img => img.id === 'logo');
 
   return (

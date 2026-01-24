@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from 'react';
-import { useAuth } from '@/lib/auth';
+import { useData } from '@/lib/data-provider';
 import { Button } from '@/components/ui/button';
 import {
   Select,
@@ -14,7 +14,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from 'lucide-react';
 
 export function AsesorSelector() {
-  const { setAsesor, asesor: currentAsesor, asesores, isSyncing } = useAuth();
+  const { setAsesor, asesor: currentAsesor, asesores, isSyncing } = useData();
   const [selectedAsesorId, setSelectedAsesorId] = useState<string | undefined>(currentAsesor?.idAsesor);
   const { toast } = useToast();
 

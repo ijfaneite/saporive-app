@@ -4,6 +4,7 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import Image from 'next/image';
 import { useParams } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
+import { useData } from '@/lib/data-provider';
 import { Pedido, Producto, Cliente } from '@/lib/types';
 import { API_BASE_URL, API_ROUTES } from '@/lib/config';
 import { Loader2 } from 'lucide-react';
@@ -13,7 +14,8 @@ import { es } from 'date-fns/locale';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 
 export default function ImprimirPedidoPage() {
-  const { token, asesor, clients, products, selectedEmpresa, isLoading: isAuthLoading, logout } = useAuth();
+  const { token, logout, isLoading: isAuthLoading } = useAuth();
+  const { asesor, clients, products, selectedEmpresa } = useData();
   const params = useParams();
   const { toast } = useToast();
   const logo = PlaceHolderImages.find(img => img.id === 'logo');
@@ -59,7 +61,7 @@ export default function ImprimirPedidoPage() {
   }, [orderId, token, toast, isAuthLoading, logout]);
   
   useEffect(() => {
-    if (isAuthLoading || isLoading || !pedido) {
+    if (isLoading || !pedido) {
       return;
     }
 
@@ -74,13 +76,13 @@ export default function ImprimirPedidoPage() {
     // Use a small timeout to allow content to render before print dialog
     const timer = setTimeout(() => {
       window.print();
-    }, 200);
+    }, 500);
 
     return () => {
       clearTimeout(timer);
       window.removeEventListener('afterprint', handleAfterPrint);
     };
-  }, [isAuthLoading, isLoading, pedido]);
+  }, [isLoading, pedido]);
 
   const cliente = useMemo(() => {
     if (!pedido) return null;

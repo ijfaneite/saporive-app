@@ -3,6 +3,7 @@ import {AuthProvider} from '@/lib/auth';
 import {Toaster} from '@/components/ui/toaster';
 import { ThemeProvider } from "@/components/theme-provider";
 import './globals.css';
+import { DataProvider } from '@/lib/data-provider';
 
 export const metadata: Metadata = {
   title: 'saporive-app',
@@ -36,8 +37,10 @@ export default function RootLayout({
             disableTransitionOnChange
         >
             <AuthProvider>
-              {children}
-              <Toaster />
+              <DataProvider>
+                {children}
+                <Toaster />
+              </DataProvider>
             </AuthProvider>
         </ThemeProvider>
       </body>

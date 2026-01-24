@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { useAuth } from '@/lib/auth';
+import { useData } from '@/lib/data-provider';
 import { Producto, Pedido, DetallePedidoBase, PedidoCreatePayload } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -32,7 +32,7 @@ interface PedidoFormProps {
 }
 
 export function PedidoForm({ mode, initialPedido, idPedidoGenerado, onSave, isSaving }: PedidoFormProps) {
-    const { clients, products, selectedEmpresa, asesor: loggedInAsesor, asesores } = useAuth();
+    const { clients, products, selectedEmpresa, asesor: loggedInAsesor, asesores } = useData();
     const { toast } = useToast();
 
     const isViewMode = mode === 'consultar';
@@ -185,7 +185,6 @@ export function PedidoForm({ mode, initialPedido, idPedidoGenerado, onSave, isSa
     }, [initialPedido]);
 
     const horaUltimaActualizacion = useMemo(() => {
-        // For new orders, it's the current time. For existing, it's the update time.
         return initialPedido ? new Date(initialPedido.updatedAt) : new Date();
     }, [initialPedido]);
 

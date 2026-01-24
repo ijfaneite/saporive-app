@@ -2,7 +2,7 @@
 
 import React from 'react';
 import Image from 'next/image';
-import { useAuth } from '@/lib/auth';
+import { useData } from '@/lib/data-provider';
 import { Pedido, Producto } from '@/lib/types';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -13,7 +13,7 @@ interface PedidoShareImageProps {
 }
 
 export function PedidoShareImage({ pedido }: PedidoShareImageProps) {
-  const { asesor, clients, products, selectedEmpresa } = useAuth();
+  const { asesor, clients, products, selectedEmpresa } = useData();
   const logo = PlaceHolderImages.find(img => img.id === 'logo');
 
   const cliente = clients.find(c => c.idCliente === pedido.idCliente);

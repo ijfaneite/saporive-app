@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from 'react';
-import { useAuth } from '@/lib/auth';
+import { useData } from '@/lib/data-provider';
 import { Button } from '@/components/ui/button';
 import {
   Select,
@@ -14,7 +14,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from 'lucide-react';
 
 export function AsesorSelectionModal() {
-  const { setAsesor, asesores, isSyncing, setEmpresa, empresas } = useAuth();
+  const { setAsesor, asesores, isSyncing, setEmpresa, empresas } = useData();
   const { toast } = useToast();
   
   const [selectedAsesorId, setSelectedAsesorId] = useState<string | undefined>();
@@ -50,7 +50,6 @@ export function AsesorSelectionModal() {
   };
 
   return (
-    <div className="absolute inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
       <div className="bg-card p-6 rounded-lg shadow-xl w-full max-w-sm space-y-6">
         <div className="text-center">
             <h2 className="text-2xl font-bold font-headline text-primary">Configuración Inicial</h2>
@@ -101,6 +100,5 @@ export function AsesorSelectionModal() {
           Continuar
         </Button>
       </div>
-    </div>
   );
 }

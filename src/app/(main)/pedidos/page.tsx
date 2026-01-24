@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
+import { useData } from '@/lib/data-provider';
 import { Pedido, PedidoCreatePayload, DetallePedidoBase } from '@/lib/types';
 import { API_BASE_URL, API_ROUTES } from '@/lib/config';
 import { useToast } from "@/hooks/use-toast";
@@ -31,7 +32,8 @@ import { filterPedidosByTerm } from '@/lib/filter-config';
 
 
 export default function PedidosPage() {
-  const { token, asesor, clients, logout, localPedidos, isSyncingLocal } = useAuth();
+  const { token, logout } = useAuth();
+  const { asesor, clients, localPedidos, isSyncingLocal } = useData();
   const { toast } = useToast();
   const router = useRouter();
 

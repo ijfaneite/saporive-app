@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
+import { useData } from '@/lib/data-provider';
 import { Pedido, PedidoCreatePayload } from '@/lib/types';
 import { API_BASE_URL, API_ROUTES } from '@/lib/config';
 import { useToast } from "@/hooks/use-toast";
@@ -12,7 +13,8 @@ import Link from 'next/link';
 import { PedidoForm } from '@/components/PedidoForm';
 
 export default function EditarPedidoPage() {
-  const { token, products, logout } = useAuth();
+  const { token, logout } = useAuth();
+  const { products } = useData();
   const router = useRouter();
   const params = useParams();
   const { toast } = useToast();

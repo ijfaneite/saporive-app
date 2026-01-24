@@ -1,6 +1,7 @@
 "use client";
 
 import { useAuth } from '@/lib/auth';
+import { useData } from '@/lib/data-provider';
 import { Header } from '@/components/Header';
 import { BottomNav } from '@/components/BottomNav';
 import { AsesorSelectionModal } from '@/components/AsesorSelectionModal';
@@ -8,30 +9,29 @@ import { Loader2 } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 
 export default function MainLayout({ children }: { children: React.ReactNode }) {
-  const { asesor, isLoading, user, selectedEmpresa } = useAuth();
+  const { isLoading: isAuthLoading, user } = useAuth();
+  const { isDataLoading, asesor, selectedEmpresa } = useData();
   const pathname = usePathname();
 
   const isPrintPage = pathname.includes('/imprimir');
 
-  // Para la página de impresión, mostramos solo el contenido, sin layout
   if (isPrintPage) {
     return <>{children}</>;
   }
 
-  if (isLoading) {
+  if (isAuthLoading || isDataLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-background">
         <Loader2 className="w-12 h-12 animate-spin text-primary" />
+        <p className='ml-4'>Cargando datos...</p>
       </div>
     );
   }
 
-  // Explicitly check role for modal visibility
   const showSetupModal = user && (
     (user.idRol === 'admin' && (!selectedEmpresa || !asesor)) ||
     (user.idRol !== 'admin' && !selectedEmpresa)
   );
-
 
   return (
     <div className="bg-gray-200 dark:bg-gray-900 min-h-screen flex items-center justify-center font-body">
@@ -39,18 +39,14 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
         <Header />
         <main className="flex-grow overflow-y-auto">
           {showSetupModal ? (
-            <div className="flex items-center justify-center h-full">
-              <div className="text-center">
-                <Loader2 className="w-12 h-12 animate-spin text-primary mx-auto" />
-                <p className="mt-4 text-muted-foreground">Requiere configuración inicial...</p>
-              </div>
+            <div className="flex items-center justify-center h-full p-4">
+               <AsesorSelectionModal />
             </div>
           ) : (
             children
           )}
         </main>
-        <BottomNav />
-        {showSetupModal && <AsesorSelectionModal />}
+        {!showSetupModal && <BottomNav />}
       </div>
     </div>
   );

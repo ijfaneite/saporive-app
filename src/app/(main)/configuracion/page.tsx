@@ -1,6 +1,7 @@
 "use client";
 
 import { useAuth } from "@/lib/auth";
+import { useData } from "@/lib/data-provider";
 import { Button } from "@/components/ui/button";
 import { LogOut, RefreshCw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -28,7 +29,8 @@ import { AsesorSelector } from "@/components/AsesorSelector";
 import { EmpresaSelector } from "@/components/EmpresaSelector";
 
 export default function ConfiguracionPage() {
-  const { user, logout, syncData, isSyncing } = useAuth();
+  const { user, logout } = useAuth();
+  const { syncData, isSyncing } = useData();
   const { toast } = useToast();
 
   const handleSync = async () => {
