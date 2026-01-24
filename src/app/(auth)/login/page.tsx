@@ -18,7 +18,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { useToast } from "@/hooks/use-toast";
-import { Loader2 } from 'lucide-react';
+import { Loader2, Eye, EyeOff } from 'lucide-react';
 
 const formSchema = z.object({
   username: z.string().min(1, { message: "El usuario es requerido." }),
@@ -29,6 +29,7 @@ export default function LoginPage() {
   const { login } = useAuth();
   const { toast } = useToast();
   const [isLoggingIn, setIsLoggingIn] = React.useState(false);
+  const [showPassword, setShowPassword] = React.useState(false);
   
   const logo = PlaceHolderImages.find(img => img.id === 'logo');
 
@@ -93,9 +94,27 @@ export default function LoginPage() {
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Clave</FormLabel>
-                  <FormControl>
-                    <Input type="password" placeholder="••••••••" {...field} />
-                  </FormControl>
+                  <div className="relative">
+                    <FormControl>
+                      <Input
+                        type={showPassword ? "text" : "password"}
+                        placeholder="••••••••"
+                        {...field}
+                        className="pr-10"
+                      />
+                    </FormControl>
+                    <button
+                      type="button"
+                      className="absolute inset-y-0 right-0 flex items-center pr-3"
+                      onClick={() => setShowPassword((prev) => !prev)}
+                    >
+                      {showPassword ? (
+                        <EyeOff className="h-5 w-5 text-muted-foreground" />
+                      ) : (
+                        <Eye className="h-5 w-5 text-muted-foreground" />
+                      )}
+                    </button>
+                  </div>
                   <FormMessage />
                 </FormItem>
               )}
