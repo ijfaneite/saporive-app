@@ -12,6 +12,7 @@ import { Pedido, Cliente, Producto } from '@/lib/types';
  * - Estado del Pedido
  * - Nombre del Cliente
  * - RIF del Cliente
+ * - Zona del Cliente
  * 
  * La búsqueda no distingue entre mayúsculas y minúsculas.
  *
@@ -37,8 +38,9 @@ export const filterPedidosByTerm = (
     const matchesStatus = pedido.Status.toLowerCase().includes(lowercasedTerm);
     const matchesCliente = cliente && cliente.Cliente.toLowerCase().includes(lowercasedTerm);
     const matchesRif = cliente && cliente.Rif.toLowerCase().includes(lowercasedTerm);
+    const matchesZona = cliente && cliente.Zona.toLowerCase().includes(lowercasedTerm);
 
-    return matchesId || matchesStatus || matchesCliente || matchesRif;
+    return matchesId || matchesStatus || matchesCliente || matchesRif || matchesZona;
   });
 };
 

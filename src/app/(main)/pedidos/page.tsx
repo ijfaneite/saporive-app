@@ -310,7 +310,7 @@ export default function PedidosPage() {
 
       <div className="relative flex-shrink-0">
         <Input 
-          placeholder="Escriba aqui para buscar"
+          placeholder="Buscar por ID, cliente, RIF, zona o estado..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           className="pr-10"
@@ -362,7 +362,10 @@ export default function PedidosPage() {
                                        </p>
                                        <p className="font-medium truncate">{cliente ? cliente.Cliente : 'Sin cliente'}</p>
                                        {cliente && (
-                                           <p className="text-xs text-muted-foreground truncate">{cliente.Rif}</p>
+                                           <>
+                                            <p className="text-xs text-muted-foreground truncate">{cliente.Rif}</p>
+                                            <p className="text-xs text-muted-foreground truncate">{cliente.Zona}</p>
+                                           </>
                                        )}
                                    </div>
 

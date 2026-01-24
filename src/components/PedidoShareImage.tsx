@@ -59,6 +59,10 @@ export function PedidoShareImage({ pedido }: PedidoShareImageProps) {
                 <span>{pedido.Rif || cliente?.Rif}</span>
             </div>
             <div>
+                <span className="font-bold">Zona: </span>
+                <span>{cliente?.Zona}</span>
+            </div>
+            <div>
                 <span className="font-bold">Asesor: </span>
                 <span>{asesor?.idAsesor} - {asesor?.Asesor}</span>
             </div>

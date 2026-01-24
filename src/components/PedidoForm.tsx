@@ -67,9 +67,11 @@ export function PedidoForm({ mode, initialPedido, idPedidoGenerado, onSave, isSa
         if (!loggedInAsesor) return [];
         const allAsesorClients = clientes.filter(c => c.idAsesor === loggedInAsesor.idAsesor);
         if (!clientSearch) return allAsesorClients;
+        const lowercasedTerm = clientSearch.toLowerCase();
         return allAsesorClients.filter(c => 
-            c.Cliente.toLowerCase().includes(clientSearch.toLowerCase()) || 
-            c.Rif.toLowerCase().includes(clientSearch.toLowerCase())
+            c.Cliente.toLowerCase().includes(lowercasedTerm) || 
+            c.Rif.toLowerCase().includes(lowercasedTerm) ||
+            c.Zona.toLowerCase().includes(lowercasedTerm)
         );
     }, [clientes, loggedInAsesor, clientSearch]);
 
@@ -203,7 +205,10 @@ export function PedidoForm({ mode, initialPedido, idPedidoGenerado, onSave, isSa
                             <p className="font-bold text-lg text-foreground truncate">{mode === 'nuevo' ? idPedidoGenerado : initialPedido?.idPedido}</p>
                             <p className="text-sm font-medium truncate">{selectedClient ? selectedClient.Cliente : 'Sin cliente'}</p>
                             {selectedClient && (
-                                <p className="text-xs text-muted-foreground truncate">{selectedClient.Rif}</p>
+                                <>
+                                    <p className="text-xs text-muted-foreground truncate">{selectedClient.Rif}</p>
+                                    <p className="text-xs text-muted-foreground truncate">{selectedClient.Zona}</p>
+                                </>
                             )}
                             {pedidoAsesor && (
                                 <p className="text-xs text-muted-foreground truncate">{pedidoAsesor.Asesor}</p>
@@ -235,7 +240,7 @@ export function PedidoForm({ mode, initialPedido, idPedidoGenerado, onSave, isSa
                     <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
                     <div className='p-2 border-b'>
                         <Input 
-                            placeholder="Buscar cliente por nombre o RIF..." 
+                            placeholder="Buscar cliente por nombre, RIF o Zona..." 
                             value={clientSearch}
                             onChange={(e) => setClientSearch(e.target.value)}
                             autoFocus
