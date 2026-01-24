@@ -126,7 +126,14 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
 
 
     const loadInitialData = useCallback(async () => {
-        if (!user || !token) return; 
+        const localUser = getItem<User>('user');
+        const localToken = getCookie('auth_token');
+
+        if (!localUser || !localToken) {
+            setIsDataLoading(false);
+            return;
+        }; 
+        
         setIsDataLoading(true);
 
         const cachedAsesor = getItem<Asesor>('asesor');
@@ -144,27 +151,27 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         setClients(cachedClients);
         
         if (cachedProducts.length === 0 || cachedEmpresas.length === 0 || cachedAsesores.length === 0) {
-            await syncData(token);
+            await syncData(localToken);
         }
 
         const allAsesores = getItem<Asesor[]>('asesores') || [];
-        if (user.idRol !== 'admin' && allAsesores.length > 0 && !cachedAsesor) {
-            const match = allAsesores.find(a => a.idAsesor.toLowerCase() === user.username.toLowerCase());
+        if (localUser.idRol !== 'admin' && allAsesores.length > 0 && !cachedAsesor) {
+            const match = allAsesores.find(a => a.idAsesor.toLowerCase() === localUser.username.toLowerCase());
             if (match) {
                 setAsesorState(match);
                 setItem('asesor', match);
                 if (cachedClients.length === 0) {
-                    await fetchClientsForAsesor(match.idAsesor, token);
+                    await fetchClientsForAsesor(match.idAsesor, localToken);
                 }
             }
         }
         
         setIsDataLoading(false);
-    }, [user, token, syncData, fetchClientsForAsesor]);
+    }, [syncData, fetchClientsForAsesor]);
 
     useEffect(() => {
         loadInitialData();
-    }, [loadInitialData]);
+    }, [loadInitialData, user]);
 
 
     const setAsesor = useCallback((asesorToSet: Asesor) => {
@@ -191,10 +198,11 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     
     const findAndReserveNextPedidoId = useCallback(async (): Promise<string | null> => {
         if (!token || !selectedEmpresa) return null;
-        
-        let nextIdPedidoToTry = selectedEmpresa.idPedido;
+    
+        // We assume selectedEmpresa.idPedido is the last *used* ID. We start checking from the next one.
+        let currentIdToTry = selectedEmpresa.idPedido + 1;
         let attempts = 0;
-
+    
         while (attempts < 20) {
             attempts++;
             
@@ -202,49 +210,49 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
             const year = date.getFullYear();
             const month = String(date.getMonth() + 1).padStart(2, '0');
             const day = String(date.getDate()).padStart(2, '0');
-            const nextId = String(nextIdPedidoToTry).padStart(3, '0');
+            const nextId = String(currentIdToTry).padStart(3, '0');
             const candidateId = `${year}${month}${day}-${nextId}`;
-
+    
             try {
                 const checkResponse = await fetch(`${API_BASE_URL}${API_ROUTES.pedidos}${candidateId}`, {
                     headers: { Authorization: `Bearer ${token}` },
                 });
-
-                if (checkResponse.ok) { // This means the ID EXISTS, try the next one.
-                    nextIdPedidoToTry++;
+    
+                if (checkResponse.ok) { // This ID EXISTS, so we try the next one.
+                    currentIdToTry++;
                     continue;
                 }
-
-                if (checkResponse.status === 404) { // This means the ID is FREE. Let's try to reserve it.
-                    const newCounterValue = nextIdPedidoToTry + 1;
+    
+                if (checkResponse.status === 404) { // This ID IS FREE. Let's reserve and use it.
+                    // We update the company counter to the ID we are about to use.
                     const updateResponse = await fetch(`${API_BASE_URL}${API_ROUTES.updateEmpresaPedido}${selectedEmpresa.idEmpresa}`, {
                         method: 'PUT',
                         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-                        body: JSON.stringify({ idPedido: newCounterValue }),
+                        body: JSON.stringify({ idPedido: currentIdToTry }),
                     });
-
+    
                     if (updateResponse.ok) {
                         const updatedEmpresa = await updateResponse.json();
                         updateEmpresaInState(updatedEmpresa);
-                        return candidateId;
-                    } else { 
-                        // CRITICAL FAILURE: The counter update failed. We must stop.
-                        // Continuing would cause a gap in the sequence.
-                        toast({ variant: 'destructive', title: 'Error Crítico', description: `Se encontró el ID ${candidateId} libre, pero no se pudo actualizar el contador en el servidor. Reintente.` });
+                        return candidateId; // Return the successfully reserved ID.
+                    } else {
+                        // CRITICAL FAILURE: The counter update failed. This could be a race condition.
+                        // We must stop to avoid creating an inconsistent state.
+                        toast({ variant: 'destructive', title: 'Error Crítico', description: `Se encontró el ID ${candidateId} libre, pero no se pudo actualizar el contador. Reintente.` });
                         return null;
                     }
                 }
                 
-                // Any other error from server during check
+                // Any other server error during check
                 toast({ variant: 'destructive', title: 'Error de Red', description: `No se pudo verificar el ID del pedido. (Estatus: ${checkResponse.status})` });
                 return null;
-
+    
             } catch (error) {
                 toast({ variant: "destructive", title: "Error de Conexión", description: "No se pudo comunicar con el servidor para obtener un ID de pedido." });
                 return null;
             }
         }
-
+    
         toast({ variant: "destructive", title: "No se pudo asignar ID", description: "No se pudo encontrar un ID de pedido disponible después de varios intentos." });
         return null;
     }, [token, selectedEmpresa, updateEmpresaInState, toast]);
