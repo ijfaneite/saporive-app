@@ -112,14 +112,13 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         }
       }, [token, toast, logout, fetchClientesForAsesor, isOnline]);
 
-
     const setAsesor = useCallback(async (asesorToSet: Asesor) => {
         setAsesorState(asesorToSet);
         await db.config.put({ key: 'asesor', value: asesorToSet });
-        if (token && isOnline) {
+        if (isOnline) {
             await fetchClientesForAsesor(asesorToSet.idAsesor);
         }
-    }, [token, fetchClientesForAsesor, isOnline]);
+    }, [fetchClientesForAsesor, isOnline]);
 
     useEffect(() => {
         const loadAppData = async () => {
@@ -157,16 +156,13 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
                 if (needsMasterSync) {
                     await syncData();
                 } else if (localAsesor && cachedClientes.length === 0) {
-                    // if master data is present, just fetch clients if needed
                     await fetchClientesForAsesor(localAsesor.idAsesor);
                 }
             }
 
             // Step 4: Setup default advisor for non-admin users if not already configured.
-            // This logic runs with data from DB, regardless of online status.
-            const currentAsesores = await db.asesores.toArray();
-            if (user.idRol !== 'admin' && currentAsesores.length > 0 && !localAsesor) {
-                const match = currentAsesores.find(a => a.idAsesor.toLowerCase() === user.username.toLowerCase());
+            if (user.idRol !== 'admin' && cachedAsesores.length > 0 && !localAsesor) {
+                const match = cachedAsesores.find(a => a.idAsesor.toLowerCase() === user.username.toLowerCase());
                 if (match) {
                     await setAsesor(match);
                 }
@@ -176,7 +172,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         };
         
         loadAppData();
-    }, [user, token, isAuthLoading, isOnline, syncData, fetchClientesForAsesor, setAsesor]);
+    }, [user, isAuthLoading, isOnline, syncData, fetchClientesForAsesor, setAsesor]);
 
     const setEmpresa = async (empresaToSet: Empresa) => {
         setSelectedEmpresaState(empresaToSet);
@@ -193,13 +189,14 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     };
     
     const findAndReserveNextPedidoId = useCallback(async (): Promise<string | null> => {
-        if (!token || !selectedEmpresa) return null;
+        if (!token || !selectedEmpresa || !isOnline) return null;
     
-        let nextIdCounter = selectedEmpresa.idPedido + 1;
+        let nextIdCounter = selectedEmpresa.idPedido;
         let attempts = 0;
         const MAX_ATTEMPTS = 50;
     
         while (attempts < MAX_ATTEMPTS) {
+            nextIdCounter++; // Increment to get the next candidate
             attempts++;
             
             const date = new Date();
@@ -215,39 +212,47 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
                 });
     
                 if (checkResponse.status === 404) {
+                    // ID is available, now try to reserve it by updating the main counter
                     const updateResponse = await fetch(`${API_BASE_URL}${API_ROUTES.updateEmpresaPedido}${selectedEmpresa.idEmpresa}`, {
                         method: 'PUT',
                         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-                        body: JSON.stringify({ idPedido: nextIdCounter }),
+                        body: JSON.stringify({ idPedido: nextIdCounter }), // Reserve the current counter
                     });
     
                     if (updateResponse.ok) {
-                        const updatedEmpresa = await updateResponse.json();
-                        await updateEmpresaInState(updatedEmpresa);
-                        return candidateId;
+                        // SUCCESS: The counter was updated on the server.
+                        // We will trust our own logic for the new state, not the server response body,
+                        // to prevent issues if the server increments the counter again in its response.
+                        const newEmpresaState = { ...selectedEmpresa, idPedido: nextIdCounter };
+                        await updateEmpresaInState(newEmpresaState);
+                        
+                        return candidateId; // Return the reserved ID
                     } else {
-                        toast({ variant: 'destructive', title: 'Error de Servidor', description: 'No se pudo actualizar el correlativo del pedido en el servidor. Reintentando...' });
-                        await new Promise(resolve => setTimeout(resolve, 500));
-                        nextIdCounter++;
-                        continue;
+                        // Failed to update, likely a race condition where another user took the ID.
+                        // The loop will continue and try the next number.
+                        toast({ variant: 'destructive', title: 'Error de Concurrencia', description: 'No se pudo reservar el ID. Reintentando con el siguiente número.' });
+                        continue; 
                     }
                 } else if (checkResponse.ok) {
-                    nextIdCounter++;
+                    // ID is taken, loop will continue and try the next number.
                     continue;
+                } else {
+                    // A different kind of network or server error occurred.
+                    toast({ variant: 'destructive', title: 'Error de Red', description: `No se pudo verificar el ID del pedido. (Estatus: ${checkResponse.status})` });
+                    return null; // Hard stop
                 }
-                
-                toast({ variant: 'destructive', title: 'Error de Red', description: `No se pudo verificar el ID del pedido. (Estatus: ${checkResponse.status})` });
-                return null;
     
             } catch (error) {
-                toast({ variant: "destructive", title: "Error de Conexión", description: "No se pudo comunicar con el servidor para obtener un ID de pedido." });
-                return null;
+                if (isOnline) {
+                    toast({ variant: "destructive", title: "Error de Conexión", description: "No se pudo comunicar con el servidor para obtener un ID de pedido." });
+                }
+                return null; // Hard stop
             }
         }
     
         toast({ variant: "destructive", title: "No se pudo asignar ID", description: "No se pudo encontrar un ID de pedido disponible después de varios intentos." });
         return null;
-    }, [token, selectedEmpresa, updateEmpresaInState, toast]);
+    }, [token, selectedEmpresa, updateEmpresaInState, toast, isOnline]);
 
     const addLocalPedido = useCallback(async (
         pedidoPayload: Omit<PedidoCreatePayload, 'idPedido' | 'fechaPedido' | 'Status'>
@@ -393,5 +398,3 @@ export const useData = () => {
     if (context === undefined) throw new Error('useData must be used within a DataProvider');
     return context;
 };
-
-    
