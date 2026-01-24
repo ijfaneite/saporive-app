@@ -59,7 +59,11 @@ const decryptData = (encryptedData: string): string => {
 
 const setEncryptedItem = (key: string, value: any) => {
     if (typeof localStorage !== 'undefined') {
-        localStorage.setItem(key, encryptData(JSON.stringify(value)));
+        try {
+            localStorage.setItem(key, encryptData(JSON.stringify(value)));
+        } catch(e) {
+            console.error(`Error saving to localStorage: ${key}`, e)
+        }
     }
 }
 
@@ -92,18 +96,24 @@ interface AuthContextType {
   setAsesor: (asesor: Asesor) => void;
   setEmpresa: (empresa: Empresa) => void;
   updateEmpresaInState: (empresa: Empresa) => void;
+  findAndReserveNextPedidoId: () => Promise<string | null>;
   syncData: (tokenOverride?: string) => Promise<void>;
   addLocalPedido: (pedidoPayload: Omit<PedidoCreatePayload, 'idPedido' | 'fechaPedido' | 'Status'>) => Promise<void>;
   isLoading: boolean;
   isSyncing: boolean;
   isSyncingLocal: boolean;
+  pedidos: Pedido[];
+  setPedidos: React.Dispatch<React.SetStateAction<Pedido[]>>;
+  fetchPedidos: (pageNum: number, options?: { refresh?: boolean }) => Promise<void>;
+  hasMorePedidos: boolean;
+  isLoadingPedidos: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [token, setToken] = useState<string | null>(() => getCookie('auth_token'));
+  const [token, setToken] = useState<string | null>(null);
   const [asesor, setAsesorState] = useState<Asesor | null>(null);
   const [asesores, setAsesores] = useState<Asesor[]>([]);
   const [clients, setClients] = useState<Cliente[]>([]);
@@ -114,9 +124,58 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [isSyncing, setIsSyncing] = useState(false);
   const [localPedidos, setLocalPedidos] = useState<Pedido[]>([]);
   const [isSyncingLocal, setIsSyncingLocal] = useState(false);
+  
+  // State for Pedidos list
+  const [pedidos, setPedidos] = useState<Pedido[]>([]);
+  const [pedidosPage, setPedidosPage] = useState(1);
+  const [hasMorePedidos, setHasMorePedidos] = useState(true);
+  const [isLoadingPedidos, setIsLoadingPedidos] = useState(true);
+
+
   const isOnline = useApiStatus();
   const router = useRouter();
   const { toast } = useToast();
+
+  const loadInitialData = useCallback(async () => {
+    setIsLoading(true);
+    const cachedToken = getCookie('auth_token');
+    
+    if (cachedToken) {
+        setToken(cachedToken);
+        const cachedUser = getEncryptedItem<User>('user');
+        if (cachedUser) {
+            setUser(cachedUser);
+            // Load other data only if user is successfully loaded
+            setAsesorState(getEncryptedItem<Asesor>('asesor'));
+            setSelectedEmpresaState(getEncryptedItem<Empresa>('empresa'));
+            setProducts(getEncryptedItem<Producto[]>('products') || []);
+            setEmpresas(getEncryptedItem<Empresa[]>('empresas') || []);
+            setAsesores(getEncryptedItem<Asesor[]>('asesores') || []);
+            setClients(getEncryptedItem<Cliente[]>('clients') || []);
+        } else {
+            // If user is not in cache, but token is, something is wrong.
+            // Let's try to fetch user data. If it fails, logout.
+            try {
+                const userResponse = await fetch(`${API_BASE_URL}${API_ROUTES.me}`, { headers: { 'Authorization': `Bearer ${cachedToken}`, 'Accept': 'application/json' }});
+                if (!userResponse.ok) throw new Error('Invalid session');
+                const userData: User = await userResponse.json();
+                setEncryptedItem('user', userData);
+                setUser(userData);
+            } catch {
+                eraseCookie('auth_token');
+                setToken(null);
+                setUser(null);
+                router.push('/login');
+            }
+        }
+    }
+    setIsLoading(false);
+  }, [router]);
+  
+  useEffect(() => {
+    loadInitialData();
+  }, [loadInitialData]);
+
 
   const logout = useCallback(() => {
     setToken(null);
@@ -124,6 +183,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setAsesorState(null);
     setSelectedEmpresaState(null);
     eraseCookie('auth_token');
+    // Clear all local storage
+    localStorage.removeItem('user');
+    localStorage.removeItem('asesor');
+    localStorage.removeItem('empresa');
+    localStorage.removeItem('products');
+    localStorage.removeItem('empresas');
+    localStorage.removeItem('asesores');
+    localStorage.removeItem('clients');
     router.push('/login');
   }, [router]);
   
@@ -143,7 +210,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               toast({ variant: "destructive", title: "Sesión expirada" });
               logout();
           } else {
-              toast({ variant: "destructive", title: "Error al Cargar Clientes", description: error instanceof Error ? error.message : "Error desconocido." });
+              console.error("Error fetching clients:", error)
+              toast({ variant: "destructive", title: "Error al Cargar Clientes", description: "No se pudieron cargar los clientes. Intente sincronizar de nuevo." });
           }
       }
   }, [toast, logout]);
@@ -250,30 +318,152 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   }, [user, toast]);
 
-    const syncLocalPedidos = useCallback(async () => {
-        const pedidosToSync = await db.localPedidos.toArray();
-        if (pedidosToSync.length === 0 || !isOnline || !token || !selectedEmpresa) {
-            return;
+    const findAndReserveNextPedidoId = useCallback(async (): Promise<string | null> => {
+        if (!token || !selectedEmpresa) return null;
+
+        let nextIdPedidoToTry = selectedEmpresa.idPedido;
+        let attempts = 0;
+
+        while (attempts < 20) {
+            attempts++;
+            
+            const date = new Date();
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            const nextId = String(nextIdPedidoToTry).padStart(3, '0');
+            const candidateId = `${year}${month}${day}-${nextId}`;
+
+            try {
+                const checkResponse = await fetch(`${API_BASE_URL}${API_ROUTES.pedidos}${candidateId}`, {
+                    headers: { Authorization: `Bearer ${token}` },
+                });
+
+                if (checkResponse.ok) {
+                    // ID already exists, try the next one.
+                    nextIdPedidoToTry++;
+                    continue; // Continue to next iteration of the while loop.
+                }
+
+                if (checkResponse.status === 404) {
+                    // ID is available. Let's try to reserve it by updating the company counter.
+                    const newCounterValue = nextIdPedidoToTry + 1;
+                    
+                    const updateResponse = await fetch(`${API_BASE_URL}${API_ROUTES.updateEmpresaPedido}${selectedEmpresa.idEmpresa}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                        body: JSON.stringify({ idPedido: newCounterValue }),
+                    });
+
+                    if (updateResponse.ok) {
+                        // Success! We've reserved the ID.
+                        const updatedEmpresa = await updateResponse.json();
+                        updateEmpresaInState(updatedEmpresa);
+                        return candidateId; // Return the successfully reserved ID string and exit.
+                    } else {
+                        // Reservation failed, probably a race condition.
+                        // Another client might have updated the counter.
+                        // We'll just try the next ID in the sequence.
+                        nextIdPedidoToTry++;
+                        continue;
+                    }
+                }
+                
+                // If we are here, it means checkResponse was not OK and not 404.
+                // Some other network or server error.
+                toast({ variant: 'destructive', title: 'Error de Red', description: 'No se pudo verificar el ID del pedido.' });
+                return null;
+
+            } catch (error) {
+                toast({ variant: "destructive", title: "Error de Conexión", description: "No se pudo comunicar con el servidor para obtener un ID de pedido." });
+                return null;
+            }
+        }
+
+        // If we exit the loop, it means we failed after 20 attempts.
+        toast({ variant: "destructive", title: "No se pudo asignar ID", description: "No se pudo encontrar un ID de pedido disponible después de varios intentos." });
+        return null;
+    }, [token, selectedEmpresa, updateEmpresaInState, toast]);
+
+    const loadLocalPedidosFromDb = useCallback(async () => {
+        const localPedidosFromDb = await db.localPedidos.orderBy('createdAt').reverse().toArray();
+        setLocalPedidos(localPedidosFromDb);
+      }, []);
+
+    const fetchPedidos = useCallback(async (pageNum: number, options?: { refresh?: boolean }) => {
+        if (!token || !asesor) {
+          return;
+        }
+        const PAGE_SIZE = 25;
+    
+        const isInitialLoadOrRefresh = pageNum === 1;
+        if (isInitialLoadOrRefresh) {
+          setIsLoadingPedidos(true);
+          setPedidos([]);
+        } else {
+          // This is for infinite scroll, which we aren't using for now
         }
     
+        try {
+          const offset = (pageNum - 1) * PAGE_SIZE;
+          const url = new URL(`${API_BASE_URL}${API_ROUTES.pedidos}`);
+          url.searchParams.append('id_asesor', asesor.idAsesor);
+          url.searchParams.append('offset', String(offset));
+          url.searchParams.append('limit', String(PAGE_SIZE));
+          
+          const pedidosRes = await fetch(url.toString(), {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+    
+          if (pedidosRes.status === 401) {
+            toast({ variant: 'destructive', title: 'Sesión expirada', description: 'Por favor inicie sesión de nuevo.' });
+            logout();
+            return;
+          }
+    
+          if (!pedidosRes.ok) throw new Error('No se pudieron cargar los pedidos');
+          
+          const newPedidos: Pedido[] = await pedidosRes.json();
+    
+          setPedidos(prev => isInitialLoadOrRefresh ? newPedidos : [...prev, ...newPedidos]);
+          setHasMorePedidos(newPedidos.length === PAGE_SIZE);
+          setPedidosPage(pageNum);
+    
+        } catch (error) {
+          toast({
+            variant: "destructive",
+            title: "Error de Carga de Pedidos",
+            description: error instanceof Error ? error.message : "Ocurrió un error al cargar los datos.",
+          });
+        } finally {
+          setIsLoadingPedidos(false);
+        }
+      }, [token, asesor, toast, logout]);
+    
+    const syncLocalPedidos = useCallback(async () => {
+        const pedidosToSync = await db.localPedidos.toArray();
+        if (pedidosToSync.length === 0 || !isOnline || !token) {
+            return;
+        }
+
+        const confirmSync = window.confirm(`Tiene ${pedidosToSync.length} pedido(s) locales. ¿Desea sincronizarlos ahora?`);
+        if (!confirmSync) return;
+    
         setIsSyncingLocal(true);
-        toast({ title: 'Sincronizando pedidos locales...' });
+        toast({ title: 'Iniciando sincronización de pedidos locales...' });
         
-        let currentEmpresa = selectedEmpresa;
         const syncedIds: string[] = [];
         let successCount = 0;
     
         for (const localPedido of pedidosToSync) {
             try {
-                const nextId = String(currentEmpresa.idPedido).padStart(3, '0');
-                const date = new Date(localPedido.fechaPedido);
-                const year = date.getFullYear();
-                const month = String(date.getMonth() + 1).padStart(2, '0');
-                const day = String(date.getDate()).padStart(2, '0');
-                const realIdPedido = `${year}${month}${day}-${nextId}`;
+                const reservedId = await findAndReserveNextPedidoId();
+                if (!reservedId) {
+                    throw new Error(`No se pudo reservar un ID para el pedido local ${localPedido.idPedido}`);
+                }
                 
                 const pedidoPayload: PedidoCreatePayload = {
-                  idPedido: realIdPedido,
+                  idPedido: reservedId,
                   idEmpresa: localPedido.idEmpresa,
                   fechaPedido: localPedido.fechaPedido,
                   totalPedido: localPedido.totalPedido,
@@ -292,24 +482,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 if (response.status === 401) throw new Error("401");
                 if (!response.ok) {
                     const errorData = await response.json().catch(() => ({}));
+                    // IMPORTANT: If pedido creation fails, we have already incremented the counter.
+                    // This will cause a skipped number, which is better than a duplicate.
+                    // The error will be logged, and the local order will remain to be retried later.
+                    console.error(`Error al sincronizar pedido ${localPedido.idPedido}: ${errorData.detail || 'Error desconocido'}`);
                     throw new Error(`Error al sincronizar pedido ${localPedido.idPedido}: ${errorData.detail || 'Error desconocido'}`);
                 }
                 
-                const nextCounter = currentEmpresa.idPedido + 1;
-                const empresaUpdateRes = await fetch(`${API_BASE_URL}${API_ROUTES.updateEmpresaPedido}${currentEmpresa.idEmpresa}`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-                    body: JSON.stringify({ idPedido: nextCounter }),
-                });
-    
-                if (!empresaUpdateRes.ok) throw new Error('No se pudo actualizar el contador de pedidos de la empresa.');
-                
-                const updatedEmpresa = await empresaUpdateRes.json();
-                currentEmpresa = updatedEmpresa;
-                updateEmpresaInState(updatedEmpresa);
-    
-                successCount++;
                 syncedIds.push(localPedido.idPedido);
+                successCount++;
     
             } catch (error) {
                 console.error(`Failed to sync order ${localPedido.idPedido}:`, error);
@@ -317,8 +498,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                     toast({ variant: "destructive", title: "Sesión expirada" });
                     logout();
                     setIsSyncingLocal(false);
-                    return;
+                    return; // Stop sync process on auth error
                 }
+                // Stop on first error to prevent cascade issues
+                toast({ variant: "destructive", title: "Error de Sincronización", description: `Fallo al sincronizar pedido ${localPedido.idPedido}. Proceso detenido.` });
+                break;
             }
         }
 
@@ -330,69 +514,50 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setLocalPedidos(remainingLocalPedidos);
     
         setIsSyncingLocal(false);
+
         if (successCount > 0) {
             toast({
                 title: "Sincronización Completada",
                 description: `${successCount} pedido(s) local(es) se han sincronizado.`,
             });
-            await syncData();
-        } else if (pedidosToSync.length > 0 && successCount === 0) {
-            toast({
-                variant: "destructive",
-                title: "Fallo en la Sincronización",
-                description: "No se pudieron sincronizar los pedidos locales. Se reintentará más tarde.",
-            });
+            await fetchPedidos(1, { refresh: true }); // Refresh the main pedido list
         }
     
-    }, [isOnline, token, selectedEmpresa, updateEmpresaInState, syncData, toast, logout]);
+    }, [isOnline, token, findAndReserveNextPedidoId, toast, logout, fetchPedidos]);
+
 
   useEffect(() => {
-    const initialDataLoad = async () => {
-        setIsLoading(true);
-        const cachedUser = getEncryptedItem<User>('user');
-        const cachedToken = getCookie('auth_token');
-        setUser(cachedUser);
-        setToken(cachedToken);
-        setAsesorState(getEncryptedItem<Asesor>('asesor'));
-        setSelectedEmpresaState(getEncryptedItem<Empresa>('empresa'));
-        
-        const localPedidosFromDb = await db.localPedidos.orderBy('createdAt').reverse().toArray();
-        setLocalPedidos(localPedidosFromDb);
-        
-        const cachedProducts = getEncryptedItem<Producto[]>('products');
-        if (cachedProducts && cachedProducts.length > 0) {
-            setProducts(cachedProducts);
-            setEmpresas(getEncryptedItem<Empresa[]>('empresas') || []);
-            setAsesores(getEncryptedItem<Asesor[]>('asesores') || []);
-            setClients(getEncryptedItem<Cliente[]>('clients') || []);
-            setIsLoading(false);
-            if (cachedToken) await syncData(cachedToken);
-        } else if (cachedToken) {
-            await syncData(cachedToken);
-            setIsLoading(false);
-        } else {
-            setIsLoading(false);
-        }
-    };
-    initialDataLoad();
-  }, [token]);
+    loadLocalPedidosFromDb();
+  }, [loadLocalPedidosFromDb]);
+
 
   useEffect(() => {
-    const checkAndSync = async () => {
+    const checkAndPromptSync = async () => {
         if (isOnline) {
             const count = await db.localPedidos.count();
-            if (count > 0) {
+            if (count > 0 && !isSyncingLocal) {
                 syncLocalPedidos();
             }
         }
     }
-    checkAndSync();
-  }, [isOnline, syncLocalPedidos]);
+    const interval = setInterval(checkAndPromptSync, 60000); // Check every minute
+    checkAndPromptSync(); // Also check on mount
+    return () => clearInterval(interval);
+  }, [isOnline, isSyncingLocal, syncLocalPedidos]);
 
 
   const login = async (username: string, password: string) => {
-    localStorage.removeItem('asesor');
-    localStorage.removeItem('empresa');
+    // Clear all local data on new login to ensure freshness
+    eraseCookie('auth_token');
+    localStorage.clear();
+    setAsesorState(null);
+    setSelectedEmpresaState(null);
+    setProducts([]);
+    setEmpresas([]);
+    setAsesores([]);
+    setClients([]);
+    setPedidos([]);
+
 
     let response;
     try {
@@ -420,6 +585,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setEncryptedItem('user', userData);
     setUser(userData);
     setToken(access_token);
+    await syncData(access_token);
     router.push('/pedidos');
   };
 
@@ -442,7 +608,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, [user, asesores, asesor, setAsesor]);
 
   return (
-    <AuthContext.Provider value={{ user, token, asesor, asesores, clients, products, empresas, selectedEmpresa, localPedidos, login, logout, setAsesor, setEmpresa, updateEmpresaInState, syncData, addLocalPedido, isLoading, isSyncing, isSyncingLocal }}>
+    <AuthContext.Provider value={{ 
+        user, token, asesor, asesores, clients, products, empresas, selectedEmpresa, localPedidos, 
+        login, logout, setAsesor, setEmpresa, updateEmpresaInState, syncData, addLocalPedido, 
+        findAndReserveNextPedidoId, isLoading, isSyncing, isSyncingLocal,
+        pedidos, setPedidos, fetchPedidos, hasMorePedidos, isLoadingPedidos
+    }}>
       {children}
     </AuthContext.Provider>
   );
