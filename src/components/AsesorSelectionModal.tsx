@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useData } from '@/lib/data-provider';
+import { useAuth } from '@/lib/auth';
 import { Button } from '@/components/ui/button';
 import {
   Select,
@@ -14,17 +15,27 @@ import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from 'lucide-react';
 
 export function AsesorSelectionModal() {
-  const { setAsesor, asesores, isSyncing, setEmpresa, empresas } = useData();
+  const { user } = useAuth();
+  const { setAsesor, asesores, isSyncing, setEmpresa, empresas, asesor: currentAsesor } = useData();
   const { toast } = useToast();
   
-  const [selectedAsesorId, setSelectedAsesorId] = useState<string | undefined>();
+  const isUserAdmin = user?.idRol === 'admin';
+
+  const [selectedAsesorId, setSelectedAsesorId] = useState<string | undefined>(isUserAdmin ? undefined : currentAsesor?.idAsesor);
   const [selectedEmpresaId, setSelectedEmpresaId] = useState<string | undefined>();
 
-  const canContinue = selectedEmpresaId && selectedAsesorId;
+  useEffect(() => {
+    // Pre-fill a non-admin user's advisor since it is determined by the system
+    if (!isUserAdmin && currentAsesor) {
+      setSelectedAsesorId(currentAsesor.idAsesor);
+    }
+  }, [isUserAdmin, currentAsesor]);
+
+  const canContinue = selectedEmpresaId && (isUserAdmin ? selectedAsesorId : true);
 
   const handleContinue = () => {
     if (!canContinue) {
-        toast({ variant: "destructive", title: "Error", description: "Por favor, seleccione una empresa y un asesor." });
+        toast({ variant: "destructive", title: "Error", description: "Por favor, seleccione una empresa." });
         return;
     }
     
@@ -34,18 +45,23 @@ export function AsesorSelectionModal() {
         return;
     }
 
-    const selectedAdv = asesores.find(a => a.idAsesor === selectedAsesorId);
-    if (!selectedAdv) {
-        toast({ variant: "destructive", title: "Error", description: "El asesor seleccionado no es válido." });
+    const advisorToSet = isUserAdmin 
+        ? asesores.find(a => a.idAsesor === selectedAsesorId)
+        : currentAsesor;
+
+    if (!advisorToSet) {
+        toast({ variant: "destructive", title: "Error", description: "No se ha podido determinar el asesor." });
         return;
     }
 
     setEmpresa(selectedComp);
-    setAsesor(selectedAdv);
+    if (isUserAdmin) {
+        setAsesor(advisorToSet);
+    }
 
     toast({
         title: "Configuración guardada",
-        description: `Trabajando con ${selectedComp.RazonSocial} como ${selectedAdv.Asesor}.`,
+        description: `Trabajando con ${selectedComp.RazonSocial} como ${advisorToSet.Asesor}.`,
     });
   };
 
@@ -78,21 +94,23 @@ export function AsesorSelectionModal() {
               </Select>
             </div>
             
-            <div>
-                <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 mb-2 block">Asesor de Ventas</label>
-                <Select onValueChange={setSelectedAsesorId} defaultValue={selectedAsesorId}>
-                    <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Seleccione un asesor..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                        {asesores.map((asesor) => (
-                        <SelectItem key={asesor.idAsesor} value={asesor.idAsesor}>
-                            {asesor.Asesor}
-                        </SelectItem>
-                        ))}
-                    </SelectContent>
-                </Select>
-            </div>
+            {isUserAdmin && (
+              <div>
+                  <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 mb-2 block">Asesor de Ventas</label>
+                  <Select onValueChange={setSelectedAsesorId} defaultValue={selectedAsesorId}>
+                      <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Seleccione un asesor..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                          {asesores.map((asesor) => (
+                          <SelectItem key={asesor.idAsesor} value={asesor.idAsesor}>
+                              {asesor.Asesor}
+                          </SelectItem>
+                          ))}
+                      </SelectContent>
+                  </Select>
+              </div>
+            )}
           </div>
         )}
 
