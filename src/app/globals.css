@@ -32,6 +32,7 @@ body {
     --success-foreground: 210 40% 98%;
     --border: 0 0% 89.8%;
     --input: 0 0% 89.8%;
+    --input-background: 45 50% 93%;
     --ring: 7.4 100% 38.4%;
     --radius: 0.5rem;
   }
@@ -60,6 +61,7 @@ body {
     --success-foreground: 210 40% 98%;
     --border: 240 3.7% 15.9%;
     --input: 240 3.7% 15.9%;
+    --input-background: 45 10% 25%;
     --ring: 7.4 100% 38.4%;
   }
 }

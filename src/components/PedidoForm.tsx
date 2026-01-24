@@ -232,7 +232,7 @@ export function PedidoForm({ mode, initialPedido, idPedidoGenerado, onSave, isSa
                 <CardContent className="p-2 pt-0">
                 <Popover open={clientPopoverOpen} onOpenChange={setClientPopoverOpen}>
                     <PopoverTrigger asChild>
-                    <Button variant="outline" role="combobox" aria-expanded={clientPopoverOpen} className="w-full justify-between font-normal" disabled={isViewMode}>
+                    <Button variant="outline" role="combobox" aria-expanded={clientPopoverOpen} className="w-full justify-between font-normal bg-[hsl(var(--input-background))]" disabled={isViewMode}>
                         <span className='truncate'>{selectedClient?.Cliente ?? "Seleccione un cliente..."}</span>
                         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                     </Button>
@@ -275,7 +275,7 @@ export function PedidoForm({ mode, initialPedido, idPedidoGenerado, onSave, isSa
                     <CardContent className="p-2 pt-0 space-y-4">
                         <Popover open={productPopoverOpen} onOpenChange={setProductPopoverOpen}>
                             <PopoverTrigger asChild>
-                                <Button variant="outline" className="w-full justify-start font-normal">
+                                <Button variant="outline" className="w-full justify-start font-normal bg-[hsl(var(--input-background))]">
                                     <PlusCircle className="mr-2 h-4 w-4" />
                                     Añadir producto al pedido...
                                 </Button>
