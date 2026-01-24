@@ -188,18 +188,19 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     const findAndReserveNextPedidoId = useCallback(async (): Promise<string | null> => {
         if (!token || !selectedEmpresa) return null;
     
-        let currentIdToTry = selectedEmpresa.idPedido + 1;
+        let idToTry = selectedEmpresa.idPedido;
         let attempts = 0;
         const MAX_ATTEMPTS = 50;
     
         while (attempts < MAX_ATTEMPTS) {
             attempts++;
+            idToTry++; // Always increment to get the next candidate.
             
             const date = new Date();
             const year = date.getFullYear();
             const month = String(date.getMonth() + 1).padStart(2, '0');
             const day = String(date.getDate()).padStart(2, '0');
-            const nextId = String(currentIdToTry).padStart(3, '0');
+            const nextId = String(idToTry).padStart(3, '0');
             const candidateId = `${year}${month}${day}-${nextId}`;
     
             try {
@@ -207,16 +208,15 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
                     headers: { Authorization: `Bearer ${token}` },
                 });
     
-                if (checkResponse.ok) {
-                    currentIdToTry++;
+                if (checkResponse.ok) { // ID is already taken, loop will continue and increment.
                     continue;
                 }
     
-                if (checkResponse.status === 404) {
+                if (checkResponse.status === 404) { // ID is free, try to claim it.
                     const updateResponse = await fetch(`${API_BASE_URL}${API_ROUTES.updateEmpresaPedido}${selectedEmpresa.idEmpresa}`, {
                         method: 'PUT',
                         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-                        body: JSON.stringify({ idPedido: currentIdToTry }),
+                        body: JSON.stringify({ idPedido: idToTry }), // Claim this ID.
                     });
     
                     if (updateResponse.ok) {
@@ -224,8 +224,9 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
                         await updateEmpresaInState(updatedEmpresa);
                         return candidateId;
                     } else {
-                        toast({ variant: 'destructive', title: 'Error Crítico', description: `Se encontró el ID ${candidateId} libre, pero no se pudo actualizar el contador. Reintente.` });
-                        return null;
+                        // Update failed, likely a race condition. Someone else claimed it.
+                        // The loop will continue, and idToTry will be incremented again on the next iteration.
+                        continue;
                     }
                 }
                 
