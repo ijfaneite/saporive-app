@@ -267,11 +267,11 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
           ...pedidoPayload, idPedido: tempId, fechaPedido: now.toISOString(),
           Status: 'Local', detalles: detallesConTotal, createdAt: now.toISOString(),
           updatedAt: now.toISOString(), createdBy: user.username, updatedBy: user.username,
-          isLocal: true,
+          isLocal: 1,
         };
         
         await db.pedidos.add(newLocalPedido);
-        const updatedLocalPedidos = await db.pedidos.where('isLocal').equals(true).reverse().sortBy('createdAt');
+        const updatedLocalPedidos = await db.pedidos.where('isLocal').equals(1).reverse().sortBy('createdAt');
         setPedidosLocales(updatedLocalPedidos);
 
         toast({ title: "Pedido Guardado Localmente", description: `El pedido ${tempId} se sincronizará cuando haya conexión.` });
@@ -279,12 +279,12 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     }, [user, toast]);
 
     const loadPedidosLocalesFromDb = useCallback(async () => {
-        const localPedidosFromDb = await db.pedidos.where('isLocal').equals(true).reverse().sortBy('createdAt');
+        const localPedidosFromDb = await db.pedidos.where('isLocal').equals(1).reverse().sortBy('createdAt');
         setPedidosLocales(localPedidosFromDb);
     }, []);
     
     const syncLocalPedidos = useCallback(async () => {
-        const pedidosToSync = await db.pedidos.where('isLocal').equals(true).toArray();
+        const pedidosToSync = await db.pedidos.where('isLocal').equals(1).toArray();
         if (pedidosToSync.length === 0 || !isOnline || !token) return;
 
         const confirmSync = window.confirm(`Tiene ${pedidosToSync.length} pedido(s) locales. ¿Desea sincronizarlos ahora?`);
@@ -336,7 +336,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
             }
         }
     
-        const remainingLocalPedidos = await db.pedidos.where('isLocal').equals(true).toArray();
+        const remainingLocalPedidos = await db.pedidos.where('isLocal').equals(1).toArray();
         setPedidosLocales(remainingLocalPedidos);
         setIsSyncingLocal(false);
 
@@ -353,7 +353,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     useEffect(() => {
       const checkAndPromptSync = async () => {
           if (isOnline) {
-              const count = await db.pedidos.where('isLocal').equals(true).count();
+              const count = await db.pedidos.where('isLocal').equals(1).count();
               if (count > 0 && !isSyncingLocal) {
                   syncLocalPedidos();
               }

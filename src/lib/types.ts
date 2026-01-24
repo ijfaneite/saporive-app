@@ -111,5 +111,5 @@ export interface Pedido {
   updatedAt: string; // ISO-8601 string
   createdBy: string;
   updatedBy: string;
-  isLocal?: boolean;
+  isLocal?: number;
 }

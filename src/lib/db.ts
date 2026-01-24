@@ -17,7 +17,7 @@ export class AppDatabase extends Dexie {
 
   constructor() {
     super('saporive-app-db');
-    this.version(3).stores({
+    this.version(4).stores({
       pedidos: 'idPedido, createdAt, isLocal',
       user: 'username',
       asesores: 'idAsesor',
