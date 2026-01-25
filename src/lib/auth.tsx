@@ -106,7 +106,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     
     setUser(userData);
     setToken(access_token);
-    router.push('/pedidos');
+    router.push('/');
   };
 
   const logout = useCallback(async () => {
