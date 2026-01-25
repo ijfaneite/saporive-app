@@ -8,18 +8,21 @@ export function middleware(request: NextRequest) {
   const isAuthPage = pathname === '/login'
 
   if (pathname === '/') {
-    if (token) {
-      return NextResponse.redirect(new URL('/pedidos', request.url))
+    if (!token) {
+      return NextResponse.redirect(new URL('/login', request.url))
     }
-    return NextResponse.redirect(new URL('/login', request.url))
+    // If token exists, allow access to dashboard (new home)
+    return NextResponse.next()
   }
 
   if (isAuthPage) {
     if (token) {
-      return NextResponse.redirect(new URL('/pedidos', request.url))
+      // If logged in, redirect from login page to dashboard
+      return NextResponse.redirect(new URL('/', request.url))
     }
   } else {
     if (!token) {
+      // If not logged in, redirect any other protected page to login
       return NextResponse.redirect(new URL('/login', request.url))
     }
   }
