@@ -4,7 +4,7 @@ import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
 import { useData } from '@/lib/data-provider';
-import { Pedido, PedidoCreatePayload, DetallePedidoBase } from '@/lib/types';
+import { Pedido, PedidoCreatePayload, DetallePedidoBase, AppError } from '@/lib/types';
 import { API_BASE_URL, API_ROUTES } from '@/lib/config';
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -30,6 +30,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { filterPedidosByTerm } from '@/lib/filter-config';
 import { useApiStatus } from '@/hooks/use-api-status';
+import { Result, safeFetch } from '@/lib/result';
 
 
 export default function PedidosPage() {
@@ -53,11 +54,23 @@ export default function PedidosPage() {
   const shareComponentRef = useRef<HTMLDivElement>(null);
   const PAGE_SIZE = 25;
 
-  const fetchPedidos = useCallback(async (pageNum: number) => {
+  const fetchPedidos = useCallback(async (pageNum: number): Promise<Result<Pedido[], AppError>> => {
     if (!token || !asesor) {
-      return;
+      return { success: false, error: new AppError('No autenticado', 401) };
     }
 
+    const offset = (pageNum - 1) * PAGE_SIZE;
+    const url = new URL(`${API_BASE_URL}${API_ROUTES.pedidos}`);
+    url.searchParams.append('id_asesor', asesor.idAsesor);
+    url.searchParams.append('offset', String(offset));
+    url.searchParams.append('limit', String(PAGE_SIZE));
+    
+    return await safeFetch<Pedido[]>(url.toString(), {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+  }, [token, asesor]);
+  
+  const handleFetch = useCallback((pageNum: number) => {
     const isInitialLoad = pageNum === 1;
     if (isInitialLoad) {
       setIsLoading(true);
@@ -66,55 +79,41 @@ export default function PedidosPage() {
       setIsFetchingMore(true);
     }
 
-    try {
-      const offset = (pageNum - 1) * PAGE_SIZE;
-      const url = new URL(`${API_BASE_URL}${API_ROUTES.pedidos}`);
-      url.searchParams.append('id_asesor', asesor.idAsesor);
-      url.searchParams.append('offset', String(offset));
-      url.searchParams.append('limit', String(PAGE_SIZE));
-      
-      const pedidosRes = await fetch(url.toString(), {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+    fetchPedidos(pageNum).then(result => {
+        if (result.success) {
+            const newPedidos = result.value;
+            setPedidos(prev => isInitialLoad ? newPedidos : [...prev, ...newPedidos]);
+            setHasMore(newPedidos.length === PAGE_SIZE);
+            setPage(pageNum);
+        } else {
+            if (result.error.code === 401) {
+                toast({ variant: 'destructive', title: 'Sesión expirada', description: 'Por favor inicie sesión de nuevo.' });
+                logout();
+            } else {
+                toast({ variant: "destructive", title: "Error de Carga", description: result.error.message });
+            }
+        }
+    }).finally(() => {
+        if (isInitialLoad) setIsLoading(false);
+        else setIsFetchingMore(false);
+    });
+  }, [fetchPedidos, toast, logout]);
 
-      if (pedidosRes.status === 401) {
-        toast({ variant: 'destructive', title: 'Sesión expirada', description: 'Por favor inicie sesión de nuevo.' });
-        logout();
-        return;
-      }
 
-      if (!pedidosRes.ok) throw new Error('No se pudieron cargar los pedidos');
-      
-      const newPedidos: Pedido[] = await pedidosRes.json();
-
-      setPedidos(prev => isInitialLoad ? newPedidos : [...prev, ...newPedidos]);
-      setHasMore(newPedidos.length === PAGE_SIZE);
-      setPage(pageNum);
-
-    } catch (error) {
-      toast({
-        variant: "destructive",
-        title: "Error de Carga",
-        description: error instanceof Error ? error.message : "Ocurrió un error al cargar los datos.",
-      });
-    } finally {
-      if (isInitialLoad) setIsLoading(false);
-      else setIsFetchingMore(false);
-    }
-  }, [token, asesor, toast, logout]);
-  
   const handleRefresh = useCallback(() => {
     if (asesor) {
       setSearchTerm('');
-      fetchPedidos(1);
+      handleFetch(1);
     }
-  }, [asesor, fetchPedidos]);
+  }, [asesor, handleFetch]);
 
   useEffect(() => {
     if (asesor) {
-      fetchPedidos(1);
+      handleFetch(1);
+    } else {
+      setIsLoading(false);
     }
-  }, [asesor, fetchPedidos]);
+  }, [asesor, handleFetch]);
   
   const getCliente = useCallback((idCliente: string) => {
     return clientes.find(c => c.idCliente === idCliente);
@@ -135,17 +134,16 @@ export default function PedidosPage() {
       if (isLoading || isFetchingMore || searchTerm) return;
       if (observer.current) observer.current.disconnect();
       observer.current = new IntersectionObserver(entries => {
-          if (entries[0].isIntersecting && hasMore && !pedidosLocales.length) { // Do not paginate if local orders are present
-              fetchPedidos(page + 1);
+          if (entries[0].isIntersecting && hasMore && !pedidosLocales.length) {
+            handleFetch(page + 1);
           }
       });
       if (node) observer.current.observe(node);
-  }, [isLoading, isFetchingMore, hasMore, page, fetchPedidos, searchTerm, pedidosLocales.length]);
+  }, [isLoading, isFetchingMore, hasMore, page, handleFetch, searchTerm, pedidosLocales.length]);
 
-  const updateStatus = useCallback(async (pedidoToUpdate: Pedido, newStatus: string): Promise<boolean> => {
+  const updateStatus = useCallback(async (pedidoToUpdate: Pedido, newStatus: string): Promise<Result<Pedido, AppError>> => {
     if (!token || !asesor) {
-        toast({ variant: "destructive", title: "Error de Sincronización", description: "No se pudo actualizar el estado del pedido." });
-        return false;
+        return { success: false, error: new AppError('No autenticado', 401) };
     }
 
     const detallesParaEnviar: DetallePedidoBase[] = pedidoToUpdate.detalles.map(linea => ({
@@ -155,61 +153,54 @@ export default function PedidosPage() {
     }));
 
     const pedidoPayload: PedidoCreatePayload = {
-      idPedido: pedidoToUpdate.idPedido,
-      fechaPedido: pedidoToUpdate.fechaPedido,
-      totalPedido: pedidoToUpdate.totalPedido,
-      idAsesor: pedidoToUpdate.idAsesor,
-      Status: newStatus,
-      idCliente: pedidoToUpdate.idCliente,
-      idEmpresa: pedidoToUpdate.idEmpresa,
-      detalles: detallesParaEnviar,
+      idPedido: pedidoToUpdate.idPedido, fechaPedido: pedidoToUpdate.fechaPedido,
+      totalPedido: pedidoToUpdate.totalPedido, idAsesor: pedidoToUpdate.idAsesor,
+      Status: newStatus, idCliente: pedidoToUpdate.idCliente,
+      idEmpresa: pedidoToUpdate.idEmpresa, detalles: detallesParaEnviar,
     };
 
-    try {
-      const response = await fetch(`${API_BASE_URL}${API_ROUTES.pedidos}${pedidoToUpdate.idPedido}`, {
+    const result = await safeFetch<Pedido>(`${API_BASE_URL}${API_ROUTES.pedidos}${pedidoToUpdate.idPedido}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify(pedidoPayload),
-      });
+    });
 
-      if (response.status === 401) {
-        toast({ variant: 'destructive', title: 'Sesión expirada', description: 'Inicie sesión de nuevo.' });
-        logout();
-        return false;
-      }
-
-      if (response.ok) {
-        toast({ title: 'Estado Actualizado', description: `El pedido se ha marcado como "${newStatus}".` });
+    if (result.success) {
         setPedidos(prev => prev.map(p => p.idPedido === pedidoToUpdate.idPedido ? {...p, Status: newStatus} : p));
-        return true;
-      } else {
-        const errorData = await response.json().catch(() => ({ detail: 'No se pudo cambiar el estado.' }));
-        toast({ variant: 'destructive', title: 'Error al actualizar', description: errorData.detail });
-        return false;
-      }
-    } catch (error) {
-      toast({ variant: "destructive", title: "Error de Conexión", description: "No se pudo comunicar con el servidor." });
-      return false;
     }
-  }, [token, asesor, toast, logout]);
+    
+    return result;
+  }, [token, asesor]);
   
   const updateStatusToEnviado = useCallback(async (pedidoToUpdate: Pedido): Promise<void> => {
     if (pedidoToUpdate.Status.toLowerCase() !== 'enviado') {
-        await updateStatus(pedidoToUpdate, 'Enviado');
+        const result = await updateStatus(pedidoToUpdate, 'Enviado');
+        if (!result.success) {
+            if (result.error.code === 401) { logout(); }
+            toast({ variant: 'destructive', title: 'Error al actualizar estado', description: result.error.message });
+        }
     }
-  }, [updateStatus]);
+  }, [updateStatus, logout, toast]);
 
   const handlePrint = useCallback(async (pedidoToPrint: Pedido) => {
     const currentStatus = pedidoToPrint.Status.toLowerCase();
+    let shouldPrint = true;
+
     if (currentStatus !== 'impreso' && currentStatus !== 'enviado') {
-        const success = await updateStatus(pedidoToPrint, 'Impreso');
-        if (success) {
-            window.open(`/pedidos/${pedidoToPrint.idPedido}/imprimir`, '_blank');
+        const result = await updateStatus(pedidoToPrint, 'Impreso');
+        if (result.success) {
+            toast({ title: 'Estado Actualizado', description: `El pedido se ha marcado como "Impreso".` });
+        } else {
+            shouldPrint = false;
+            if (result.error.code === 401) { logout(); }
+            toast({ variant: 'destructive', title: 'Error al actualizar estado', description: result.error.message });
         }
-    } else {
+    }
+    
+    if (shouldPrint) {
         window.open(`/pedidos/${pedidoToPrint.idPedido}/imprimir`, '_blank');
     }
-  }, [updateStatus]);
+  }, [updateStatus, logout, toast]);
 
   useEffect(() => {
     if (sharingPedido && shareComponentRef.current) {
@@ -269,10 +260,15 @@ export default function PedidosPage() {
     return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value);
   }
 
-  const handleSyncLocal = useCallback(async () => {
-    await syncLocalPedidos();
-    handleRefresh();
-  }, [syncLocalPedidos, handleRefresh]);
+  const handleSyncLocal = async () => {
+    const result = await syncLocalPedidos();
+    if (result.success) {
+      toast({ title: 'Sincronización Finalizada', description: `${result.value} pedido(s) locales sincronizados.` });
+      handleRefresh();
+    } else {
+      toast({ variant: 'destructive', title: 'Error de Sincronización', description: result.error.message });
+    }
+  };
 
   return (
     <div className="p-4 space-y-6 flex flex-col h-full">
@@ -357,7 +353,7 @@ export default function PedidosPage() {
                                <div className="grid grid-cols-[1fr_auto] gap-x-4">
                                    <div className="min-w-0 flex-grow space-y-1 self-center">
                                        <p className="font-bold text-lg text-foreground truncate flex items-center gap-2">
-                                           {pedido.isLocal && <WifiOff className="h-4 w-4 text-destructive shrink-0" title="Pedido Local"/>}
+                                           {pedido.isLocal === 1 && <WifiOff className="h-4 w-4 text-destructive shrink-0" title="Pedido Local"/>}
                                            {pedido.idPedido}
                                        </p>
                                        <p className="font-medium truncate">{cliente ? cliente.Cliente : 'Sin cliente'}</p>
@@ -398,13 +394,13 @@ export default function PedidosPage() {
                                                 <span>Consultar</span>
                                             </DropdownMenuItem>
                                             <DropdownMenuItem
-                                                disabled={pedido.isLocal || ['enviado', 'impreso'].includes(pedido.Status.toLowerCase())}
+                                                disabled={!!pedido.isLocal || ['enviado', 'impreso'].includes(pedido.Status.toLowerCase())}
                                                 onSelect={() => router.push(`/pedidos/${pedido.idPedido}`)}
                                             >
                                                 <Pencil className="mr-2 h-4 w-4" />
                                                 <span>Editar</span>
                                             </DropdownMenuItem>
-                                            <DropdownMenuItem onSelect={() => handlePrint(pedido)} disabled={pedido.isLocal}>
+                                            <DropdownMenuItem onSelect={() => handlePrint(pedido)} disabled={!!pedido.isLocal}>
                                                 <Printer className="mr-2 h-4 w-4" />
                                                 <span>Imprimir</span>
                                             </DropdownMenuItem>

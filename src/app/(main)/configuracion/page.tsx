@@ -38,11 +38,20 @@ export default function ConfiguracionPage() {
       title: "Sincronización iniciada",
       description: "Los datos se están actualizando en segundo plano.",
     });
-    await syncData();
-    toast({
-        title: "Sincronización completada",
-        description: "Todos los datos están al día.",
-      });
+    const result = await syncData();
+
+    if (result.success) {
+        toast({
+            title: "Sincronización completada",
+            description: "Todos los datos están al día.",
+          });
+    } else {
+        toast({
+            variant: "destructive",
+            title: "Error de Sincronización",
+            description: result.error.message,
+        });
+    }
   };
 
   return (

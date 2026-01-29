@@ -113,3 +113,21 @@ export interface Pedido {
   updatedBy: string;
   isLocal?: number;
 }
+
+/**
+ * Custom error class for the application.
+ * Allows for consistent error handling with optional codes and context.
+ */
+export class AppError extends Error {
+  public readonly context?: any;
+
+  constructor(message: string, public readonly code?: string | number, context?: any) {
+    super(message);
+    this.name = 'AppError';
+    this.context = context;
+    // This is for V8 environments (like Node.js, Chrome)
+    if (Error.captureStackTrace) {
+      Error.captureStackTrace(this, AppError);
+    }
+  }
+}

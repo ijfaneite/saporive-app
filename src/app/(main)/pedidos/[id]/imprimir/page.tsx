@@ -12,6 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
+import { safeFetch } from '@/lib/result';
 
 export default function ImprimirPedidoPage() {
   const { token, logout, isLoading: isAuthLoading } = useAuth();
@@ -30,31 +31,25 @@ export default function ImprimirPedidoPage() {
 
     const fetchPedido = async () => {
       setIsLoading(true);
-      try {
-        const response = await fetch(`${API_BASE_URL}${API_ROUTES.pedidos}${orderId}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+      const result = await safeFetch<Pedido>(`${API_BASE_URL}${API_ROUTES.pedidos}${orderId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
 
-        if (response.status === 401) {
+      if (result.success) {
+        setPedido(result.value);
+      } else {
+        if (result.error.code === 401) {
             toast({ variant: 'destructive', title: 'Sesión expirada', description: 'Inicie sesión de nuevo.' });
             logout();
-            return;
+        } else {
+            toast({
+                variant: 'destructive',
+                title: 'Error al cargar pedido',
+                description: result.error.message,
+              });
         }
-
-        if (!response.ok) {
-          throw new Error('No se pudo cargar el pedido para imprimir.');
-        }
-        const data: Pedido = await response.json();
-        setPedido(data);
-      } catch (error) {
-        toast({
-          variant: 'destructive',
-          title: 'Error al cargar pedido',
-          description: error instanceof Error ? error.message : 'Ocurrió un error inesperado.',
-        });
-      } finally {
-        setIsLoading(false);
       }
+      setIsLoading(false);
     };
 
     fetchPedido();

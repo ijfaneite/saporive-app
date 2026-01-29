@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Loader2, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import { PedidoForm } from '@/components/PedidoForm';
+import { safeFetch } from '@/lib/result';
 
 export default function EditarPedidoPage() {
   const { token, logout } = useAuth();
@@ -30,29 +31,22 @@ export default function EditarPedidoPage() {
 
     const fetchPedido = async () => {
       setIsLoading(true);
-      try {
-        const response = await fetch(`${API_BASE_URL}${API_ROUTES.pedidos}${orderId}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+      const result = await safeFetch<Pedido>(`${API_BASE_URL}${API_ROUTES.pedidos}${orderId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
 
-        if (response.status === 401) {
+      if (result.success) {
+        setPedido(result.value);
+      } else {
+        if (result.error.code === 401) {
             toast({ variant: 'destructive', title: 'Sesión expirada', description: 'Inicie sesión de nuevo.' });
             logout();
-            return;
+        } else {
+            toast({ variant: "destructive", title: "Error al cargar pedido", description: result.error.message });
+            router.push('/pedidos');
         }
-
-        if (!response.ok) {
-          throw new Error('No se pudo cargar el pedido.');
-        }
-        const data: Pedido = await response.json();
-        setPedido(data);
-
-      } catch (error) {
-        toast({ variant: "destructive", title: "Error al cargar pedido", description: error instanceof Error ? error.message : "Ocurrió un error inesperado." });
-        router.push('/pedidos');
-      } finally {
-        setIsLoading(false);
       }
+      setIsLoading(false);
     };
 
     fetchPedido();
@@ -71,8 +65,7 @@ export default function EditarPedidoPage() {
    
     setIsSaving(true);
     
-    try {
-      const response = await fetch(`${API_BASE_URL}${API_ROUTES.pedidos}${orderId}`, {
+    const result = await safeFetch<Pedido>(`${API_BASE_URL}${API_ROUTES.pedidos}${orderId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -81,33 +74,26 @@ export default function EditarPedidoPage() {
         body: JSON.stringify(pedidoPayload),
       });
 
-      if (response.status === 401) {
-        toast({ variant: 'destructive', title: 'Sesión expirada', description: 'Inicie sesión de nuevo.' });
-        logout();
-        setIsSaving(false);
-        return;
-      }
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ detail: 'Error desconocido del servidor.' }));
-        throw new Error(errorData.detail || 'No se pudo actualizar el pedido.');
-      }
-      
+    if (result.success) {
       toast({
         title: "Pedido Actualizado",
         description: "El pedido se ha actualizado exitosamente.",
       });
       router.push('/pedidos');
-
-    } catch (error) {
-      toast({
-        variant: "destructive",
-        title: "Error al guardar",
-        description: error instanceof Error ? error.message : "Ocurrió un error inesperado.",
-      });
-    } finally {
-      setIsSaving(false);
+    } else {
+        if (result.error.code === 401) {
+            toast({ variant: 'destructive', title: 'Sesión expirada', description: 'Inicie sesión de nuevo.' });
+            logout();
+        } else {
+            toast({
+                variant: "destructive",
+                title: "Error al guardar",
+                description: result.error.message,
+              });
+        }
     }
+
+    setIsSaving(false);
   };
 
   if (isLoading) {

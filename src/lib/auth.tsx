@@ -2,9 +2,10 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { User } from '@/lib/types';
+import { User, Token, AppError } from '@/lib/types';
 import { API_BASE_URL, API_ROUTES } from '@/lib/config';
 import { db } from './db';
+import { Result, success, failure, safeFetch } from './result';
 
 const setCookie = (name: string, value: string, days: number) => {
     if (typeof document === 'undefined') return;
@@ -38,7 +39,7 @@ const eraseCookie = (name: string) => {
 interface AuthContextType {
   user: User | null;
   token: string | null;
-  login: (username: string, password: string) => Promise<void>;
+  login: (username: string, password: string) => Promise<Result<User, AppError>>;
   logout: () => void;
   isLoading: boolean;
 }
@@ -68,38 +69,29 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     loadSession();
   }, []);
 
-  const login = async (username: string, password: string) => {
-    let response;
-    try {
-        response = await fetch(`${API_BASE_URL}${API_ROUTES.token}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'Accept': 'application/json' },
-            body: new URLSearchParams({ grant_type: 'password', username, password, scope: '', client_id: '', client_secret: '' })
-        });
-    } catch (error) { throw new Error("Login - No se pudo conectar al servidor de autenticación."); }
+  const login = async (username: string, password: string): Promise<Result<User, AppError>> => {
+    const tokenResult = await safeFetch<Token>(`${API_BASE_URL}${API_ROUTES.token}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'Accept': 'application/json' },
+        body: new URLSearchParams({ grant_type: 'password', username, password, scope: '', client_id: '', client_secret: '' })
+    });
     
-    if (!response.ok) {
-        const errorBody = await response.json().catch(() => ({ detail: 'Usuario o clave incorrectos.' }));
-        throw new Error(errorBody.detail || 'Usuario o clave incorrectos.');
-    }
-    const { access_token } = await response.json();
-    
-    let userResponse;
-    try {
-        userResponse = await fetch(`${API_BASE_URL}${API_ROUTES.me}`, { headers: { 'Authorization': `Bearer ${access_token}`, 'Accept': 'application/json' }});
-    } catch (error) { 
-        eraseCookie('auth_token');
-        throw new Error("Token - No se pudo conectar con el servidor."); 
+    if (!tokenResult.success) {
+        return failure(new AppError(tokenResult.error.message || 'Usuario o clave incorrectos.', tokenResult.error.code));
     }
 
-    if (!userResponse.ok) { 
+    const { access_token } = tokenResult.value;
+    
+    const userResult = await safeFetch<User>(`${API_BASE_URL}${API_ROUTES.me}`, { headers: { 'Authorization': `Bearer ${access_token}`, 'Accept': 'application/json' }});
+
+    if (!userResult.success) {
         eraseCookie('auth_token');
-        throw new Error('No se pudieron obtener los datos del usuario.'); 
+        return failure(new AppError('No se pudieron obtener los datos del usuario.', userResult.error.code));
     }
     
-    const userData: User = await userResponse.json();
+    const userData = userResult.value;
 
-    await db.clearAllData();
+    await db.clearAllDataOnLogout();
 
     setCookie('auth_token', access_token, 7);
     await db.user.put(userData);
@@ -107,13 +99,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setUser(userData);
     setToken(access_token);
     router.push('/');
+    return success(userData);
   };
 
   const logout = useCallback(async () => {
     setToken(null);
     setUser(null);
     eraseCookie('auth_token');
-    await db.clearAllData();
+    await db.clearAllDataOnLogout();
     router.push('/login');
   }, [router]);
 

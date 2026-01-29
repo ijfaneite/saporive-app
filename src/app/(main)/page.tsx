@@ -3,13 +3,14 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useAuth } from '@/lib/auth';
 import { useData } from '@/lib/data-provider';
-import { Pedido } from '@/lib/types';
+import { Pedido, AppError } from '@/lib/types';
 import { API_BASE_URL, API_ROUTES } from '@/lib/config';
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { Loader2, AlertCircle, Send, Printer, Edit, WifiOff, Package } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Result, safeFetch } from '@/lib/result';
 
 const statusConfig: { [key: string]: { icon: React.ElementType; color: string; textColor: string } } = {
   Pendiente: { icon: AlertCircle, color: 'hsl(var(--destructive))', textColor: 'text-destructive' },
@@ -27,35 +28,30 @@ export default function DashboardPage() {
   const [pedidos, setPedidos] = useState<Pedido[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  const fetchAllPedidos = useCallback(async (asesorId: string) => {
-    if (!token) return;
-    setIsLoading(true);
+  const fetchAllPedidos = useCallback(async (asesorId: string): Promise<Result<Pedido[], AppError>> => {
+    if (!token) return { success: false, error: new AppError('No autenticado', 401) };
+    
     let allPedidos: Pedido[] = [];
     let page = 1;
     const limit = 100;
     let hasMore = true;
 
-    try {
-      while (hasMore) {
+    while (hasMore) {
         const offset = (page - 1) * limit;
         const url = new URL(`${API_BASE_URL}${API_ROUTES.pedidos}`);
         url.searchParams.append('id_asesor', asesorId);
         url.searchParams.append('offset', String(offset));
         url.searchParams.append('limit', String(limit));
 
-        const response = await fetch(url.toString(), {
+        const result = await safeFetch<Pedido[]>(url.toString(), {
           headers: { Authorization: `Bearer ${token}` },
         });
 
-        if (response.status === 401) {
-          toast({ variant: 'destructive', title: 'Sesión expirada', description: 'Por favor inicie sesión de nuevo.' });
-          logout();
-          hasMore = false;
-          return;
+        if (!result.success) {
+            return result;
         }
-        if (!response.ok) throw new Error('No se pudieron cargar los pedidos para el resumen.');
-
-        const newPedidos: Pedido[] = await response.json();
+        
+        const newPedidos = result.value;
         allPedidos = [...allPedidos, ...newPedidos];
         
         if (newPedidos.length < limit) {
@@ -64,25 +60,33 @@ export default function DashboardPage() {
           page++;
         }
       }
-      setPedidos(allPedidos);
-    } catch (error) {
-      toast({
-        variant: "destructive",
-        title: "Error de Carga",
-        description: error instanceof Error ? error.message : "Ocurrió un error al cargar los datos del resumen.",
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  }, [token, toast, logout]);
+      return { success: true, value: allPedidos };
+  }, [token]);
 
   useEffect(() => {
     if (asesor?.idAsesor) {
-      fetchAllPedidos(asesor.idAsesor);
+      setIsLoading(true);
+      fetchAllPedidos(asesor.idAsesor).then(result => {
+        if (result.success) {
+          setPedidos(result.value);
+        } else {
+          if (result.error.code === 401) {
+            toast({ variant: 'destructive', title: 'Sesión expirada', description: 'Por favor inicie sesión de nuevo.' });
+            logout();
+          } else {
+            toast({
+              variant: "destructive",
+              title: "Error de Carga",
+              description: result.error.message,
+            });
+          }
+        }
+        setIsLoading(false);
+      });
     } else if (!isDataLoading) {
       setIsLoading(false);
     }
-  }, [asesor, isDataLoading, fetchAllPedidos]);
+  }, [asesor, isDataLoading, fetchAllPedidos, logout, toast]);
   
   const summary = useMemo(() => {
     const combinedPedidos = [...pedidos, ...pedidosLocales];

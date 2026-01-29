@@ -17,21 +17,21 @@ export class AppDatabase extends Dexie {
 
   constructor() {
     super('saporive-app-db');
-    this.version(4).stores({
+    this.version(5).stores({
       pedidos: 'idPedido, createdAt, isLocal',
       user: 'username',
       asesores: 'idAsesor',
       productos: 'idProducto',
-      clientes: 'idCliente',
+      clientes: 'idCliente, idAsesor',
       empresas: 'idEmpresa',
       config: 'key',
     });
   }
 
-  async clearAllData() {
-    // We only clear tables that contain user-specific transactional data or session info.
-    // Master data (productos, clientes, etc.) and selected configuration (empresa, asesor)
-    // are kept to allow for offline access and persistence between sessions as requested.
+  async clearAllDataOnLogout() {
+    // We only clear tables that contain session-specific data.
+    // Master data and configuration are kept to allow for offline access 
+    // and persistence between sessions as requested.
     await Promise.all([
       this.pedidos.clear(), // Clears local and synced orders from previous session
       this.user.clear(),     // Clears previous user object

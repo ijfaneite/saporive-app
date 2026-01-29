@@ -2,6 +2,7 @@
 
 import * as React from 'react';
 import Image from 'next/image';
+import { useRouter } from 'next/navigation';
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -28,6 +29,7 @@ const formSchema = z.object({
 export default function LoginPage() {
   const { login } = useAuth();
   const { toast } = useToast();
+  const router = useRouter();
   const [isLoggingIn, setIsLoggingIn] = React.useState(false);
   const [showPassword, setShowPassword] = React.useState(false);
   
@@ -43,16 +45,17 @@ export default function LoginPage() {
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoggingIn(true);
-    try {
-      await login(values.username, values.password);
-    } catch (error) {
+    const result = await login(values.username, values.password);
+
+    if (!result.success) {
       toast({
         variant: "destructive",
         title: "Error de inicio de sesión",
-        description: error instanceof Error ? error.message : "Ha ocurrido un error inesperado.",
+        description: result.error.message,
       });
       setIsLoggingIn(false);
     }
+    // On success, the auth provider handles navigation.
   }
 
   return (
