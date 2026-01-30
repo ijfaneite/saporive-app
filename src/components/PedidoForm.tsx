@@ -212,80 +212,79 @@ export const PedidoForm = forwardRef<PedidoFormRef, PedidoFormProps>(
     return (
         <div className="space-y-4">
             <Card>
-                <CardContent className='p-3 text-sm'>
+                <CardHeader className="p-3">
                     <div className="grid grid-cols-[1fr_auto] gap-x-4">
-                        {/* Left side */}
                         <div className="min-w-0 flex-grow space-y-1 self-center">
                             <p className="font-bold text-lg text-foreground truncate">{mode === 'nuevo' ? idPedidoGenerado : initialPedido?.idPedido}</p>
                             <p className="text-sm font-medium truncate">{selectedClient ? selectedClient.Cliente : 'Sin cliente'}</p>
-                            {selectedClient && (
-                                <>
-                                    <p className="text-xs text-muted-foreground truncate">{selectedClient.Rif}</p>
-                                    <p className="text-xs text-muted-foreground truncate">{selectedClient.Zona}</p>
-                                </>
-                            )}
-                            {pedidoAsesor && (
-                                <p className="text-xs text-muted-foreground truncate">{pedidoAsesor.Asesor}</p>
-                            )}
                         </div>
 
-                        {/* Right side */}
                         <div className="flex flex-col items-end gap-1 text-right">
                             <Badge variant={getStatusVariant(statusDelPedido)}>{statusDelPedido}</Badge>
                             <span className="text-xs">{format(fechaDelPedido, "dd/MMM/yyyy", { locale: es })}</span>
                             <span className="text-xs text-muted-foreground">{format(horaUltimaActualizacion, "h:mm a", { locale: es })}</span>
                         </div>
                     </div>
-                </CardContent>
-            </Card>
-
-            <Card>
-                <CardHeader className="p-2">
-                    <CardTitle className="text-lg">Cliente</CardTitle>
                 </CardHeader>
-                <CardContent className="p-2 pt-0">
-                <Popover open={clientPopoverOpen} onOpenChange={setClientPopoverOpen}>
-                    <PopoverTrigger asChild>
-                    <Button variant="outline" role="combobox" aria-expanded={clientPopoverOpen} className="w-full justify-between font-normal bg-[hsl(var(--input-background))]" disabled={isViewMode}>
-                        <span className='truncate'>{selectedClient?.Cliente ?? "Seleccione un cliente..."}</span>
-                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                    </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-                    <div className='p-2 border-b'>
-                        <Input 
-                            placeholder="Buscar cliente por nombre, RIF o Zona..." 
-                            value={clientSearch}
-                            onChange={(e) => setClientSearch(e.target.value)}
-                            autoFocus
-                        />
-                    </div>
-                    <ScrollArea className="h-56">
-                        <div className="p-1">
-                            {filteredClients.length > 0 ? filteredClients.map((cliente) => (
-                                <div key={cliente.idCliente} 
-                                    onClick={() => {
-                                        setSelectedClientId(cliente.idCliente);
-                                        setClientPopoverOpen(false);
-                                        setClientSearch("");
-                                    }}
-                                    className='text-sm p-2 rounded-sm hover:bg-accent cursor-pointer'
-                                    >
-                                {cliente.Cliente} ({cliente.Rif})
-                                </div>
-                            )) : <p className="text-center text-sm text-muted-foreground p-4">No se encontraron clientes.</p>}
+                {isViewMode && selectedClient && (
+                    <CardContent className='p-3 pt-0 text-sm border-t'>
+                        <div className="space-y-1 mt-2">
+                             <p className="text-sm"><span className="font-semibold">RIF:</span> {selectedClient.Rif}</p>
+                             <p className="text-sm"><span className="font-semibold">Zona:</span> {selectedClient.Zona}</p>
+                             {pedidoAsesor && <p className="text-sm"><span className="font-semibold">Asesor:</span> {pedidoAsesor.Asesor}</p>}
                         </div>
-                    </ScrollArea>
-                    </PopoverContent>
-                </Popover>
-                </CardContent>
+                    </CardContent>
+                )}
             </Card>
 
-            <Card>
-                <CardHeader className="p-2">
-                    <CardTitle className="text-lg">Productos</CardTitle>
-                </CardHeader>
-                {!isViewMode && (
+            {!isViewMode && (
+              <>
+                <Card>
+                    <CardHeader className="p-2">
+                        <CardTitle className="text-lg">Cliente</CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-2 pt-0">
+                    <Popover open={clientPopoverOpen} onOpenChange={setClientPopoverOpen}>
+                        <PopoverTrigger asChild>
+                        <Button variant="outline" role="combobox" aria-expanded={clientPopoverOpen} className="w-full justify-between font-normal bg-[hsl(var(--input-background))]">
+                            <span className='truncate'>{selectedClient?.Cliente ?? "Seleccione un cliente..."}</span>
+                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                        <div className='p-2 border-b'>
+                            <Input 
+                                placeholder="Buscar cliente por nombre, RIF o Zona..." 
+                                value={clientSearch}
+                                onChange={(e) => setClientSearch(e.target.value)}
+                                autoFocus
+                            />
+                        </div>
+                        <ScrollArea className="h-56">
+                            <div className="p-1">
+                                {filteredClients.length > 0 ? filteredClients.map((cliente) => (
+                                    <div key={cliente.idCliente} 
+                                        onClick={() => {
+                                            setSelectedClientId(cliente.idCliente);
+                                            setClientPopoverOpen(false);
+                                            setClientSearch("");
+                                        }}
+                                        className='text-sm p-2 rounded-sm hover:bg-accent cursor-pointer'
+                                        >
+                                    {cliente.Cliente} ({cliente.Rif})
+                                    </div>
+                                )) : <p className="text-center text-sm text-muted-foreground p-4">No se encontraron clientes.</p>}
+                            </div>
+                        </ScrollArea>
+                        </PopoverContent>
+                    </Popover>
+                    </CardContent>
+                </Card>
+
+                <Card>
+                    <CardHeader className="p-2">
+                        <CardTitle className="text-lg">Productos</CardTitle>
+                    </CardHeader>
                     <CardContent className="p-2 pt-0 space-y-4">
                         <Popover open={productPopoverOpen} onOpenChange={setProductPopoverOpen}>
                             <PopoverTrigger asChild>
@@ -334,8 +333,9 @@ export const PedidoForm = forwardRef<PedidoFormRef, PedidoFormProps>(
                             </PopoverContent>
                         </Popover>
                     </CardContent>
-                )}
-            </Card>
+                </Card>
+              </>
+            )}
 
             {lineasPedido.length > 0 && (
                 <Card>
@@ -394,3 +394,5 @@ export const PedidoForm = forwardRef<PedidoFormRef, PedidoFormProps>(
     )
 });
 PedidoForm.displayName = 'PedidoForm';
+
+    
