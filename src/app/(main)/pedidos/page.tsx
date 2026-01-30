@@ -7,10 +7,10 @@ import { useData } from '@/lib/data-provider';
 import { Pedido, PedidoCreatePayload, DetallePedidoBase, AppError } from '@/lib/types';
 import { API_BASE_URL, API_ROUTES } from '@/lib/config';
 import { useToast } from "@/hooks/use-toast";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { PlusCircle, Loader2, RefreshCw, Pencil, Printer, Eye, Share2, MoreVertical, X, WifiOff } from "lucide-react";
+import { PlusCircle, Loader2, RefreshCw, Pencil, Printer, Eye, Share2, MoreVertical, X, WifiOff, Trash2 } from "lucide-react";
 import Link from 'next/link';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -28,6 +28,16 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { filterPedidosByTerm } from '@/lib/filter-config';
 import { useApiStatus } from '@/hooks/use-api-status';
 import { Result, safeFetch } from '@/lib/result';
@@ -51,6 +61,7 @@ export default function PedidosPage() {
   
   const [viewingPedido, setViewingPedido] = useState<Pedido | null>(null);
   const [sharingPedido, setSharingPedido] = useState<Pedido | null>(null);
+  const [anulandoPedido, setAnulandoPedido] = useState<Pedido | null>(null);
   const [isSharing, setIsSharing] = useState(false);
   const [viewingTotals, setViewingTotals] = useState({ itemCount: 0, totalAmount: 0 });
   const shareComponentRef = useRef<HTMLDivElement>(null);
@@ -154,9 +165,9 @@ export default function PedidosPage() {
       if (node) observer.current.observe(node);
   }, [isLoading, isFetchingMore, hasMore, page, handleFetch, searchTerm, pedidosLocales.length]);
 
-  const updatePedidoInState = (updatedPedido: Pedido) => {
+  const updatePedidoInState = useCallback((updatedPedido: Pedido) => {
     setPedidos(prev => prev.map(p => p.idPedido === updatedPedido.idPedido ? updatedPedido : p));
-  };
+  }, []);
   
   const updateStatus = useCallback(async (pedidoToUpdate: Pedido, newStatus: string): Promise<Result<Pedido, AppError>> => {
       if (!token || !asesor) {
@@ -183,18 +194,17 @@ export default function PedidosPage() {
       });
   
       if (result.success) {
-          const updatedPedido = result.value;
-          updatePedidoInState(updatedPedido);
+          updatePedidoInState(result.value);
       }
       
       return result;
-  }, [token, asesor]);
+  }, [token, asesor, updatePedidoInState]);
   
   const updateStatusToEnviado = useCallback(async (pedidoToUpdate: Pedido): Promise<void> => {
     if (pedidoToUpdate.Status.toLowerCase() !== 'enviado') {
         const result = await updateStatus(pedidoToUpdate, 'Enviado');
         if (result.success) {
-            toast({ title: 'Estado Actualizado', description: `El pedido ${pedidoToUpdate.idPedido} se ha marcado como "Enviado".` });
+            toast({ title: 'Estado Actualizado', description: `El pedido ${result.value.idPedido} se ha marcado como "Enviado".` });
         } else {
             if (result.error.code === 401) {
                 logout();
@@ -211,7 +221,7 @@ export default function PedidosPage() {
     if (currentStatus !== 'impreso' && currentStatus !== 'enviado') {
         const result = await updateStatus(pedidoToPrint, 'Impreso');
         if (result.success) {
-            toast({ title: 'Estado Actualizado', description: `El pedido ${pedidoToPrint.idPedido} se ha marcado como "Impreso".` });
+            toast({ title: 'Estado Actualizado', description: `El pedido ${result.value.idPedido} se ha marcado como "Impreso".` });
         } else {
             shouldPrint = false;
             if (result.error.code === 401) { logout(); }
@@ -223,6 +233,22 @@ export default function PedidosPage() {
         window.open(`/pedidos/${pedidoToPrint.idPedido}/imprimir`, '_blank');
     }
   }, [updateStatus, logout, toast]);
+
+  const handleAnularPedido = async () => {
+    if (!anulandoPedido) return;
+
+    const result = await updateStatus(anulandoPedido, 'Anulado');
+
+    if (result.success) {
+      toast({ title: 'Pedido Anulado', description: `El pedido ${result.value.idPedido} ha sido anulado.` });
+    } else {
+      if (result.error.code === 401) {
+        logout();
+      }
+      toast({ variant: 'destructive', title: 'Error al anular', description: result.error.message });
+    }
+    setAnulandoPedido(null);
+  };
 
   useEffect(() => {
     if (sharingPedido && shareComponentRef.current) {
@@ -293,8 +319,8 @@ export default function PedidosPage() {
   };
 
   return (
-    <div className="space-y-6 flex flex-col h-full">
-      <div className="px-4 pt-4 flex justify-between items-center flex-shrink-0">
+    <div className="flex flex-col h-full space-y-4">
+      <div className="px-4 pt-4 flex-shrink-0 flex justify-between items-center">
         <h1 className="text-3xl font-bold font-headline text-primary">Pedidos</h1>
         <div className="flex gap-2">
             <Button variant="outline" size="icon" onClick={handleRefresh} disabled={isLoading || isFetchingMore}>
@@ -310,7 +336,7 @@ export default function PedidosPage() {
       </div>
 
       {pedidosLocales.length > 0 && isOnline && (
-        <div className="px-4">
+        <div className="px-4 flex-shrink-0">
             <Card className="border-primary/50 bg-primary/10">
             <CardContent className="p-3 flex items-center justify-between gap-4">
                 <div className='space-y-1'>
@@ -366,8 +392,8 @@ export default function PedidosPage() {
           <p className="text-muted-foreground">No se encontraron pedidos con ese criterio.</p>
         </div>
       ) : (
-        <ScrollArea className="flex-grow">
-            <div className="space-y-4 px-4 py-2">
+        <ScrollArea className="flex-grow px-4">
+            <div className="space-y-4 py-2">
                 {filteredPedidos.map((pedido, index) => {
                     const cliente = getCliente(pedido.idCliente);
                     const isLastElement = index === filteredPedidos.length - 1;
@@ -423,7 +449,7 @@ export default function PedidosPage() {
                                                 <span>Consultar</span>
                                             </DropdownMenuItem>
                                             <DropdownMenuItem
-                                                disabled={!!pedido.isLocal || pedido.Status.toLowerCase() === 'enviado'}
+                                                disabled={!!pedido.isLocal || ['enviado', 'anulado'].includes(pedido.Status.toLowerCase())}
                                                 onSelect={() => router.push(`/pedidos/${pedido.idPedido}`)}
                                             >
                                                 <Pencil className="mr-2 h-4 w-4" />
@@ -440,6 +466,14 @@ export default function PedidosPage() {
                                                     <Share2 className="mr-2 h-4 w-4" />
                                                 )}
                                                 <span>Compartir</span>
+                                            </DropdownMenuItem>
+                                            <DropdownMenuItem
+                                                disabled={!!pedido.isLocal || ['enviado', 'anulado'].includes(pedido.Status.toLowerCase())}
+                                                onSelect={() => setAnulandoPedido(pedido)}
+                                                className="text-destructive focus:text-destructive"
+                                            >
+                                                <Trash2 className="mr-2 h-4 w-4" />
+                                                <span>Anular</span>
                                             </DropdownMenuItem>
                                         </DropdownMenuContent>
                                     </DropdownMenu>
@@ -503,6 +537,25 @@ export default function PedidosPage() {
           </div>
         </div>
       )}
+
+      <AlertDialog open={!!anulandoPedido} onOpenChange={(isOpen) => { if (!isOpen) { setAnulandoPedido(null); }}}>
+          <AlertDialogContent>
+              <AlertDialogHeader>
+              <AlertDialogTitle>¿Desea anular este pedido?</AlertDialogTitle>
+              <AlertDialogDescription>
+                  El pedido <span className="font-bold">{anulandoPedido?.idPedido}</span> será marcado como "Anulado" y no podrá ser editado o procesado.
+              </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogAction
+                  className={buttonVariants({ variant: "destructive" })}
+                  onClick={handleAnularPedido}>
+                  Aceptar
+              </AlertDialogAction>
+              </AlertDialogFooter>
+          </AlertDialogContent>
+      </AlertDialog>
 
     </div>
   );

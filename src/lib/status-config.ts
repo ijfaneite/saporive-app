@@ -20,6 +20,8 @@ export const STATUS_COLORS: { [key: string]: BadgeVariant } = {
   enviado: 'success',
   // Lila for "Modificado"
   modificado: 'accent',
+  // Gris for "Anulado"
+  anulado: 'secondary',
 };
 
 /**
