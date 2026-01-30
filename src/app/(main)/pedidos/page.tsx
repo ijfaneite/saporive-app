@@ -40,7 +40,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { filterPedidosByTerm } from '@/lib/filter-config';
 import { useApiStatus } from '@/hooks/use-api-status';
-import { Result, safeFetch } from '@/lib/result';
+import { Result, safeFetch, success, failure } from '@/lib/result';
 
 
 export default function PedidosPage() {
@@ -71,7 +71,7 @@ export default function PedidosPage() {
 
   const fetchPedidos = useCallback(async (pageNum: number): Promise<Result<Pedido[], AppError>> => {
     if (!token || !asesor) {
-      return { success: false, error: new AppError('No autenticado', 401) };
+      return failure(new AppError('No autenticado', 401));
     }
 
     const offset = (pageNum - 1) * PAGE_SIZE;
@@ -171,7 +171,7 @@ export default function PedidosPage() {
   
   const updateStatus = useCallback(async (pedidoToUpdate: Pedido, newStatus: string): Promise<Result<Pedido, AppError>> => {
       if (!token || !asesor) {
-          return { success: false, error: new AppError('No autenticado', 401) };
+          return failure(new AppError('No autenticado', 401));
       }
   
       const detallesParaEnviar: DetallePedidoBase[] = pedidoToUpdate.detalles.map(linea => ({
@@ -194,7 +194,12 @@ export default function PedidosPage() {
       });
   
       if (result.success) {
-          updatePedidoInState(result.value);
+          // The API might return null on success (e.g. 204 No Content), 
+          // so we construct the updated pedido locally to ensure the UI can update.
+          const updatedPedido = result.value ?? { ...pedidoToUpdate, Status: newStatus, updatedAt: new Date().toISOString() };
+          
+          updatePedidoInState(updatedPedido);
+          return success(updatedPedido);
       }
       
       return result;
@@ -319,7 +324,7 @@ export default function PedidosPage() {
   };
 
   return (
-    <div className="flex flex-col h-full space-y-4">
+    <div className="flex flex-col h-full">
       <div className="px-4 pt-4 flex-shrink-0 flex justify-between items-center">
         <h1 className="text-3xl font-bold font-headline text-primary">Pedidos</h1>
         <div className="flex gap-2">
@@ -336,7 +341,7 @@ export default function PedidosPage() {
       </div>
 
       {pedidosLocales.length > 0 && isOnline && (
-        <div className="px-4 flex-shrink-0">
+        <div className="px-4 pt-4 flex-shrink-0">
             <Card className="border-primary/50 bg-primary/10">
             <CardContent className="p-3 flex items-center justify-between gap-4">
                 <div className='space-y-1'>
@@ -354,7 +359,7 @@ export default function PedidosPage() {
         </div>
       )}
 
-      <div className="px-4 relative flex-shrink-0">
+      <div className="px-4 pt-4 relative flex-shrink-0">
         <Input 
           placeholder="Buscar por ID, cliente, RIF, zona o estado..."
           value={searchTerm}
@@ -392,8 +397,8 @@ export default function PedidosPage() {
           <p className="text-muted-foreground">No se encontraron pedidos con ese criterio.</p>
         </div>
       ) : (
-        <ScrollArea className="flex-grow px-4">
-            <div className="space-y-4 py-2">
+        <ScrollArea className="flex-grow px-0">
+            <div className="space-y-4 py-2 px-4">
                 {filteredPedidos.map((pedido, index) => {
                     const cliente = getCliente(pedido.idCliente);
                     const isLastElement = index === filteredPedidos.length - 1;
