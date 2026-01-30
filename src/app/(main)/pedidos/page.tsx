@@ -397,7 +397,7 @@ export default function PedidosPage() {
           <p className="text-muted-foreground">No se encontraron pedidos con ese criterio.</p>
         </div>
       ) : (
-        <ScrollArea className="flex-grow px-0">
+        <ScrollArea className="flex-grow">
             <div className="space-y-4 py-2 px-4">
                 {filteredPedidos.map((pedido, index) => {
                     const cliente = getCliente(pedido.idCliente);
@@ -407,7 +407,7 @@ export default function PedidosPage() {
                             key={pedido.idPedido}
                             id={`pedido-${pedido.idPedido}`}
                             ref={isLastElement && !searchTerm ? lastPedidoElementRef : null}
-                            className={cn(highlightedPedidoId === pedido.idPedido && "ring-2 ring-primary")}
+                            className={cn("ring-offset-background", highlightedPedidoId === pedido.idPedido && "ring-2 ring-primary ring-offset-2")}
                         >
                            <CardContent className="p-3">
                                <div className="grid grid-cols-[1fr_auto] gap-x-4">
@@ -474,7 +474,7 @@ export default function PedidosPage() {
                                             </DropdownMenuItem>
                                             <DropdownMenuItem
                                                 disabled={!!pedido.isLocal || ['enviado', 'anulado'].includes(pedido.Status.toLowerCase())}
-                                                onSelect={() => setAnulandoPedido(pedido)}
+                                                onSelect={() => setTimeout(() => setAnulandoPedido(pedido), 0)}
                                                 className="text-destructive focus:text-destructive"
                                             >
                                                 <Trash2 className="mr-2 h-4 w-4" />
