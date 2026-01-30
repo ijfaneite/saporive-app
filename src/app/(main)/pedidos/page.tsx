@@ -355,8 +355,8 @@ export default function PedidosPage() {
           <p className="text-muted-foreground">No se encontraron pedidos con ese criterio.</p>
         </div>
       ) : (
-        <ScrollArea className="flex-grow pr-4 -mr-4">
-            <div className="space-y-4 pr-4">
+        <ScrollArea className="flex-grow">
+            <div className="space-y-4 px-1 pb-1">
                 {filteredPedidos.map((pedido, index) => {
                     const cliente = getCliente(pedido.idCliente);
                     const isLastElement = index === filteredPedidos.length - 1;
@@ -412,7 +412,7 @@ export default function PedidosPage() {
                                                 <span>Consultar</span>
                                             </DropdownMenuItem>
                                             <DropdownMenuItem
-                                                disabled={!!pedido.isLocal || ['enviado', 'impreso'].includes(pedido.Status.toLowerCase())}
+                                                disabled={!!pedido.isLocal || pedido.Status.toLowerCase() === 'enviado'}
                                                 onSelect={() => router.push(`/pedidos/${pedido.idPedido}`)}
                                             >
                                                 <Pencil className="mr-2 h-4 w-4" />
