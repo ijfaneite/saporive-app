@@ -24,6 +24,7 @@ export default function EditarPedidoPage() {
   const [pedido, setPedido] = useState<Pedido | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [totals, setTotals] = useState({ itemCount: 0, totalAmount: 0 });
 
   const orderId = params.id as string;
 
@@ -101,6 +102,10 @@ export default function EditarPedidoPage() {
     formRef.current?.submit();
   };
 
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value);
+  }
+
   if (isLoading) {
     return (
         <div className="flex items-center justify-center h-full">
@@ -141,9 +146,20 @@ export default function EditarPedidoPage() {
                     initialPedido={pedido}
                     onSave={handleUpdatePedido}
                     isSaving={isSaving}
+                    onTotalsChange={setTotals}
                 />
             </div>
         </div>
+        {totals.itemCount > 0 && (
+            <div className="flex-shrink-0 border-t bg-background p-4 flex justify-between items-center">
+                <p className="text-xl font-bold">
+                    Items: <span className="text-primary">{totals.itemCount}</span>
+                </p>
+                <p className="text-xl font-bold">
+                    Total: <span className="text-foreground">{formatCurrency(totals.totalAmount)}</span>
+                </p>
+            </div>
+        )}
     </div>
   );
 }

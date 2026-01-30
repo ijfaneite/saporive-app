@@ -52,6 +52,7 @@ export default function PedidosPage() {
   const [viewingPedido, setViewingPedido] = useState<Pedido | null>(null);
   const [sharingPedido, setSharingPedido] = useState<Pedido | null>(null);
   const [isSharing, setIsSharing] = useState(false);
+  const [viewingTotals, setViewingTotals] = useState({ itemCount: 0, totalAmount: 0 });
   const shareComponentRef = useRef<HTMLDivElement>(null);
   const PAGE_SIZE = 25;
 
@@ -452,24 +453,42 @@ export default function PedidosPage() {
         </ScrollArea>
       )}
 
-      <Sheet open={!!viewingPedido} onOpenChange={(isOpen) => !isOpen && setViewingPedido(null)}>
-        <SheetContent className="w-full sm:max-w-xl overflow-y-auto">
-            <SheetHeader>
+      <Sheet open={!!viewingPedido} onOpenChange={(isOpen) => {
+        if (!isOpen) {
+            setViewingPedido(null);
+            setViewingTotals({ itemCount: 0, totalAmount: 0 });
+        }
+      }}>
+        <SheetContent className="w-full sm:max-w-xl p-0 flex flex-col">
+            <SheetHeader className="p-6 pb-4 border-b">
                 <SheetTitle>Consultar Pedido</SheetTitle>
                 <SheetDescription>
                     Visualizando los detalles del pedido <span className='font-bold text-foreground'>{viewingPedido?.idPedido}</span>.
                 </SheetDescription>
             </SheetHeader>
-            <div className='mt-4'>
-              {viewingPedido && (
-                  <PedidoForm
-                      mode="consultar"
-                      initialPedido={viewingPedido}
-                      isSaving={false}
-                      onSave={async () => {}}
-                  />
-              )}
+            <div className='flex-grow overflow-y-auto'>
+                <div className='p-6'>
+                {viewingPedido && (
+                    <PedidoForm
+                        mode="consultar"
+                        initialPedido={viewingPedido}
+                        isSaving={false}
+                        onSave={async () => {}}
+                        onTotalsChange={setViewingTotals}
+                    />
+                )}
+                </div>
             </div>
+            {viewingTotals.itemCount > 0 && (
+                <div className="flex-shrink-0 border-t p-6 flex justify-between items-center">
+                    <p className="text-xl font-bold">
+                        Items: <span className="text-primary">{viewingTotals.itemCount}</span>
+                    </p>
+                    <p className="text-xl font-bold">
+                        Total: <span className="text-foreground">{formatCurrency(viewingTotals.totalAmount)}</span>
+                    </p>
+                </div>
+            )}
         </SheetContent>
       </Sheet>
 

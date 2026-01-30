@@ -29,6 +29,7 @@ interface PedidoFormProps {
     idPedidoGenerado?: string;
     onSave: (payload: PedidoCreatePayload) => Promise<void>;
     isSaving: boolean;
+    onTotalsChange?: (totals: { itemCount: number, totalAmount: number }) => void;
 }
 
 export interface PedidoFormRef {
@@ -36,7 +37,7 @@ export interface PedidoFormRef {
 }
 
 export const PedidoForm = forwardRef<PedidoFormRef, PedidoFormProps>(
-    ({ mode, initialPedido, idPedidoGenerado, onSave, isSaving }, ref) => {
+    ({ mode, initialPedido, idPedidoGenerado, onSave, isSaving, onTotalsChange }, ref) => {
     const { clientes, productos, selectedEmpresa, asesor: loggedInAsesor, asesores } = useData();
     const { toast } = useToast();
 
@@ -136,6 +137,10 @@ export const PedidoForm = forwardRef<PedidoFormRef, PedidoFormProps>(
             return total + (linea.producto.Precio * cantidad);
         }, 0);
     }, [lineasPedido]);
+
+    useEffect(() => {
+        onTotalsChange?.({ itemCount: lineasPedido.length, totalAmount: totalPedido });
+    }, [lineasPedido.length, totalPedido, onTotalsChange]);
 
     const formatCurrency = (value: number) => {
         return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value);
@@ -383,14 +388,6 @@ export const PedidoForm = forwardRef<PedidoFormRef, PedidoFormProps>(
                     </TableBody>
                     </Table>
                 </CardContent>
-                <CardFooter className="flex justify-between items-center p-4">
-                    <p className="text-xl font-bold">
-                        Items: <span className="text-primary">{lineasPedido.length}</span>
-                    </p>
-                    <p className="text-xl font-bold">
-                        Total: <span className="text-foreground">{formatCurrency(totalPedido)}</span>
-                    </p>
-                </CardFooter>
                 </Card>
             )}
         </div>

@@ -24,6 +24,7 @@ export default function NuevoPedidoPage() {
 
   const [isSaving, setIsSaving] = useState(false);
   const [idPedidoGenerado, setIdPedidoGenerado] = useState<string>('');
+  const [totals, setTotals] = useState({ itemCount: 0, totalAmount: 0 });
 
   useEffect(() => {
     if (!isOnline) {
@@ -106,6 +107,10 @@ export default function NuevoPedidoPage() {
     formRef.current?.submit();
   };
 
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value);
+  }
+
   return (
     <div className="flex flex-col h-full">
         <div className="flex-shrink-0 p-4 flex items-center justify-between border-b bg-background z-10">
@@ -129,9 +134,20 @@ export default function NuevoPedidoPage() {
                     idPedidoGenerado={idPedidoGenerado}
                     onSave={handleSavePedido}
                     isSaving={isSaving}
+                    onTotalsChange={setTotals}
                 />
             </div>
         </div>
+        {totals.itemCount > 0 && (
+            <div className="flex-shrink-0 border-t bg-background p-4 flex justify-between items-center">
+                <p className="text-xl font-bold">
+                    Items: <span className="text-primary">{totals.itemCount}</span>
+                </p>
+                <p className="text-xl font-bold">
+                    Total: <span className="text-foreground">{formatCurrency(totals.totalAmount)}</span>
+                </p>
+            </div>
+        )}
     </div>
   );
 }
