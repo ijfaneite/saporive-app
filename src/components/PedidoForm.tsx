@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useImperativeHandle, forwardRef } from 'react';
 import { useData } from '@/lib/data-provider';
 import { Producto, Pedido, DetallePedidoBase, PedidoCreatePayload } from '@/lib/types';
 import { Button } from '@/components/ui/button';
@@ -31,7 +31,12 @@ interface PedidoFormProps {
     isSaving: boolean;
 }
 
-export function PedidoForm({ mode, initialPedido, idPedidoGenerado, onSave, isSaving }: PedidoFormProps) {
+export interface PedidoFormRef {
+    submit: () => void;
+}
+
+export const PedidoForm = forwardRef<PedidoFormRef, PedidoFormProps>(
+    ({ mode, initialPedido, idPedidoGenerado, onSave, isSaving }, ref) => {
     const { clientes, productos, selectedEmpresa, asesor: loggedInAsesor, asesores } = useData();
     const { toast } = useToast();
 
@@ -169,6 +174,10 @@ export function PedidoForm({ mode, initialPedido, idPedidoGenerado, onSave, isSa
 
         onSave(pedidoPayload);
     };
+
+    useImperativeHandle(ref, () => ({
+        submit: handleSaveClick,
+    }));
 
     const selectedClient = useMemo(() => {
         if (!selectedClientId) return null;
@@ -374,24 +383,17 @@ export function PedidoForm({ mode, initialPedido, idPedidoGenerado, onSave, isSa
                     </TableBody>
                     </Table>
                 </CardContent>
-                <CardFooter className="flex flex-col gap-2 p-2 pt-2">
-                    <div className="flex justify-between items-center w-full">
-                        <div className="text-xl font-bold">
-                            Nro. Items: <span className="text-primary">{lineasPedido.length}</span>
-                        </div>
-                        <div className="text-xl font-bold">
-                            Total: <span className="text-foreground">{formatCurrency(totalPedido)}</span>
-                        </div>
-                    </div>
-                    {!isViewMode && (
-                        <Button onClick={handleSaveClick} disabled={isSaving} className="w-full">
-                            {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                            {mode === 'nuevo' ? 'Guardar' : 'Guardar Cambios'}
-                        </Button>
-                    )}
+                <CardFooter className="flex justify-between items-center p-4">
+                    <p className="text-xl font-bold">
+                        Items: <span className="text-primary">{lineasPedido.length}</span>
+                    </p>
+                    <p className="text-xl font-bold">
+                        Total: <span className="text-foreground">{formatCurrency(totalPedido)}</span>
+                    </p>
                 </CardFooter>
                 </Card>
             )}
         </div>
     )
-}
+});
+PedidoForm.displayName = 'PedidoForm';

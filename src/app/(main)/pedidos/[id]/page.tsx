@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
 import { useData } from '@/lib/data-provider';
@@ -8,9 +8,9 @@ import { Pedido, PedidoCreatePayload } from '@/lib/types';
 import { API_BASE_URL, API_ROUTES } from '@/lib/config';
 import { useToast } from "@/hooks/use-toast";
 import { Button } from '@/components/ui/button';
-import { Loader2, ArrowLeft } from 'lucide-react';
+import { Loader2, ArrowLeft, Save } from 'lucide-react';
 import Link from 'next/link';
-import { PedidoForm } from '@/components/PedidoForm';
+import { PedidoForm, PedidoFormRef } from '@/components/PedidoForm';
 import { safeFetch } from '@/lib/result';
 
 export default function EditarPedidoPage() {
@@ -19,6 +19,7 @@ export default function EditarPedidoPage() {
   const router = useRouter();
   const params = useParams();
   const { toast } = useToast();
+  const formRef = useRef<PedidoFormRef>(null);
 
   const [pedido, setPedido] = useState<Pedido | null>(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -95,6 +96,10 @@ export default function EditarPedidoPage() {
 
     setIsSaving(false);
   };
+  
+  const handleTriggerSave = () => {
+    formRef.current?.submit();
+  };
 
   if (isLoading) {
     return (
@@ -114,21 +119,31 @@ export default function EditarPedidoPage() {
   }
 
   return (
-    <div className="p-6 space-y-4">
-        <div className="flex items-center gap-4">
-            <Link href="/pedidos" passHref>
-                <Button variant="outline" size="icon">
-                    <ArrowLeft />
-                </Button>
-            </Link>
-            <h1 className="text-2xl font-bold font-headline text-primary">Editar Pedido</h1>
+    <div className="flex flex-col h-full">
+        <div className="flex-shrink-0 p-4 flex items-center justify-between border-b bg-background z-10">
+            <div className="flex items-center gap-4">
+                <Link href="/pedidos" passHref>
+                    <Button variant="outline" size="icon">
+                        <ArrowLeft />
+                    </Button>
+                </Link>
+                <h1 className="text-2xl font-bold font-headline text-primary">Editar Pedido</h1>
+            </div>
+            <Button onClick={handleTriggerSave} disabled={isSaving} size="icon">
+                {isSaving ? <Loader2 className="animate-spin" /> : <Save />}
+            </Button>
         </div>
-        <PedidoForm 
-            mode="editar"
-            initialPedido={pedido}
-            onSave={handleUpdatePedido}
-            isSaving={isSaving}
-        />
+        <div className="flex-grow overflow-y-auto">
+            <div className="p-4 space-y-4">
+                <PedidoForm 
+                    ref={formRef}
+                    mode="editar"
+                    initialPedido={pedido}
+                    onSave={handleUpdatePedido}
+                    isSaving={isSaving}
+                />
+            </div>
+        </div>
     </div>
   );
 }
