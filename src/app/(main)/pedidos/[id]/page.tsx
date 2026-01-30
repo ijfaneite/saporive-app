@@ -79,7 +79,7 @@ export default function EditarPedidoPage() {
         title: "Pedido Actualizado",
         description: "El pedido se ha actualizado exitosamente.",
       });
-      router.push('/pedidos');
+      router.push(`/pedidos?highlight=${orderId}`);
     } else {
         if (result.error.code === 401) {
             toast({ variant: 'destructive', title: 'Sesión expirada', description: 'Inicie sesión de nuevo.' });

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
 import { useData } from '@/lib/data-provider';
 import { Pedido, PedidoCreatePayload, DetallePedidoBase, AppError } from '@/lib/types';
@@ -38,6 +38,7 @@ export default function PedidosPage() {
   const { asesor, clientes, pedidosLocales, isSyncingLocal, syncLocalPedidos } = useData();
   const { toast } = useToast();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const isOnline = useApiStatus();
 
   const [pedidos, setPedidos] = useState<Pedido[]>([]);
@@ -53,6 +54,8 @@ export default function PedidosPage() {
   const [isSharing, setIsSharing] = useState(false);
   const shareComponentRef = useRef<HTMLDivElement>(null);
   const PAGE_SIZE = 25;
+
+  const highlightedPedidoId = searchParams.get('highlight');
 
   const fetchPedidos = useCallback(async (pageNum: number): Promise<Result<Pedido[], AppError>> => {
     if (!token || !asesor) {
@@ -128,6 +131,15 @@ export default function PedidosPage() {
     return filterPedidosByTerm(combinedPedidos, searchTerm, getCliente);
   }, [combinedPedidos, searchTerm, getCliente]);
 
+  useEffect(() => {
+    if (highlightedPedidoId && filteredPedidos.length > 0) {
+      const element = document.getElementById(`pedido-${highlightedPedidoId}`);
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }
+  }, [highlightedPedidoId, filteredPedidos]);
+
 
   const observer = useRef<IntersectionObserver>();
   const lastPedidoElementRef = useCallback(node => {
@@ -166,11 +178,12 @@ export default function PedidosPage() {
     });
 
     if (result.success) {
-        handleRefresh();
+        const updatedPedido = result.value;
+        setPedidos(prev => prev.map(p => p.idPedido === updatedPedido.idPedido ? updatedPedido : p));
     }
     
     return result;
-  }, [token, asesor, handleRefresh]);
+  }, [token, asesor]);
   
   const updateStatusToEnviado = useCallback(async (pedidoToUpdate: Pedido): Promise<void> => {
     if (pedidoToUpdate.Status.toLowerCase() !== 'enviado') {
@@ -348,7 +361,12 @@ export default function PedidosPage() {
                     const cliente = getCliente(pedido.idCliente);
                     const isLastElement = index === filteredPedidos.length - 1;
                     return (
-                        <Card key={pedido.idPedido} ref={isLastElement && !searchTerm ? lastPedidoElementRef : null}>
+                        <Card 
+                            key={pedido.idPedido}
+                            id={`pedido-${pedido.idPedido}`}
+                            ref={isLastElement && !searchTerm ? lastPedidoElementRef : null}
+                            className={cn(highlightedPedidoId === pedido.idPedido && "ring-2 ring-primary")}
+                        >
                            <CardContent className="p-3">
                                <div className="grid grid-cols-[1fr_auto] gap-x-4">
                                    <div className="min-w-0 flex-grow space-y-1 self-center">
