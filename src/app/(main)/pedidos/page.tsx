@@ -166,11 +166,11 @@ export default function PedidosPage() {
     });
 
     if (result.success) {
-        setPedidos(prev => prev.map(p => p.idPedido === pedidoToUpdate.idPedido ? {...p, Status: newStatus} : p));
+        handleRefresh();
     }
     
     return result;
-  }, [token, asesor]);
+  }, [token, asesor, handleRefresh]);
   
   const updateStatusToEnviado = useCallback(async (pedidoToUpdate: Pedido): Promise<void> => {
     if (pedidoToUpdate.Status.toLowerCase() !== 'enviado') {
