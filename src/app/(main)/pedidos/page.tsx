@@ -153,36 +153,40 @@ export default function PedidosPage() {
       if (node) observer.current.observe(node);
   }, [isLoading, isFetchingMore, hasMore, page, handleFetch, searchTerm, pedidosLocales.length]);
 
+  const updatePedidoInState = (updatedPedido: Pedido) => {
+    setPedidos(prev => prev.map(p => p.idPedido === updatedPedido.idPedido ? updatedPedido : p));
+  };
+  
   const updateStatus = useCallback(async (pedidoToUpdate: Pedido, newStatus: string): Promise<Result<Pedido, AppError>> => {
-    if (!token || !asesor) {
-        return { success: false, error: new AppError('No autenticado', 401) };
-    }
-
-    const detallesParaEnviar: DetallePedidoBase[] = pedidoToUpdate.detalles.map(linea => ({
-        idProducto: linea.idProducto,
-        Precio: linea.Precio,
-        Cantidad: linea.Cantidad,
-    }));
-
-    const pedidoPayload: PedidoCreatePayload = {
-      idPedido: pedidoToUpdate.idPedido, fechaPedido: pedidoToUpdate.fechaPedido,
-      totalPedido: pedidoToUpdate.totalPedido, idAsesor: pedidoToUpdate.idAsesor,
-      Status: newStatus, idCliente: pedidoToUpdate.idCliente,
-      idEmpresa: pedidoToUpdate.idEmpresa, detalles: detallesParaEnviar,
-    };
-
-    const result = await safeFetch<Pedido>(`${API_BASE_URL}${API_ROUTES.pedidos}${pedidoToUpdate.idPedido}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify(pedidoPayload),
-    });
-
-    if (result.success) {
-        const updatedPedido = result.value;
-        setPedidos(prev => prev.map(p => p.idPedido === updatedPedido.idPedido ? updatedPedido : p));
-    }
-    
-    return result;
+      if (!token || !asesor) {
+          return { success: false, error: new AppError('No autenticado', 401) };
+      }
+  
+      const detallesParaEnviar: DetallePedidoBase[] = pedidoToUpdate.detalles.map(linea => ({
+          idProducto: linea.idProducto,
+          Precio: linea.Precio,
+          Cantidad: linea.Cantidad,
+      }));
+  
+      const pedidoPayload: PedidoCreatePayload = {
+        idPedido: pedidoToUpdate.idPedido, fechaPedido: pedidoToUpdate.fechaPedido,
+        totalPedido: pedidoToUpdate.totalPedido, idAsesor: pedidoToUpdate.idAsesor,
+        Status: newStatus, idCliente: pedidoToUpdate.idCliente,
+        idEmpresa: pedidoToUpdate.idEmpresa, detalles: detallesParaEnviar,
+      };
+  
+      const result = await safeFetch<Pedido>(`${API_BASE_URL}${API_ROUTES.pedidos}${pedidoToUpdate.idPedido}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify(pedidoPayload),
+      });
+  
+      if (result.success) {
+          const updatedPedido = result.value;
+          updatePedidoInState(updatedPedido);
+      }
+      
+      return result;
   }, [token, asesor]);
   
   const updateStatusToEnviado = useCallback(async (pedidoToUpdate: Pedido): Promise<void> => {
@@ -356,7 +360,7 @@ export default function PedidosPage() {
         </div>
       ) : (
         <ScrollArea className="flex-grow">
-            <div className="space-y-4 px-1 pb-1">
+            <div className="space-y-4 p-2">
                 {filteredPedidos.map((pedido, index) => {
                     const cliente = getCliente(pedido.idCliente);
                     const isLastElement = index === filteredPedidos.length - 1;
