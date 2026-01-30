@@ -85,7 +85,7 @@ export default function NuevoPedidoPage() {
     });
 
     if (saveResult.success) {
-      toast({ title: "Pedido Guardado", description: "El nuevo pedido se ha creado exitosamente." });
+      toast({ title: "Pedido Guardado", description: `El pedido ${finalPayload.idPedido} se ha creado exitosamente.` });
       router.push(`/pedidos?highlight=${finalPayload.idPedido}`);
     } else {
       if (saveResult.error.code === 401) {

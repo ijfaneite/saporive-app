@@ -193,8 +193,12 @@ export default function PedidosPage() {
   const updateStatusToEnviado = useCallback(async (pedidoToUpdate: Pedido): Promise<void> => {
     if (pedidoToUpdate.Status.toLowerCase() !== 'enviado') {
         const result = await updateStatus(pedidoToUpdate, 'Enviado');
-        if (!result.success) {
-            if (result.error.code === 401) { logout(); }
+        if (result.success) {
+            toast({ title: 'Estado Actualizado', description: `El pedido ${pedidoToUpdate.idPedido} se ha marcado como "Enviado".` });
+        } else {
+            if (result.error.code === 401) {
+                logout();
+            }
             toast({ variant: 'destructive', title: 'Error al actualizar estado', description: result.error.message });
         }
     }
@@ -207,7 +211,7 @@ export default function PedidosPage() {
     if (currentStatus !== 'impreso' && currentStatus !== 'enviado') {
         const result = await updateStatus(pedidoToPrint, 'Impreso');
         if (result.success) {
-            toast({ title: 'Estado Actualizado', description: `El pedido se ha marcado como "Impreso".` });
+            toast({ title: 'Estado Actualizado', description: `El pedido ${pedidoToPrint.idPedido} se ha marcado como "Impreso".` });
         } else {
             shouldPrint = false;
             if (result.error.code === 401) { logout(); }
@@ -289,8 +293,8 @@ export default function PedidosPage() {
   };
 
   return (
-    <div className="py-4 space-y-6 flex flex-col h-full">
-      <div className="px-4 flex justify-between items-center flex-shrink-0">
+    <div className="space-y-6 flex flex-col h-full">
+      <div className="px-4 pt-4 flex justify-between items-center flex-shrink-0">
         <h1 className="text-3xl font-bold font-headline text-primary">Pedidos</h1>
         <div className="flex gap-2">
             <Button variant="outline" size="icon" onClick={handleRefresh} disabled={isLoading || isFetchingMore}>

@@ -79,7 +79,7 @@ export default function EditarPedidoPage() {
     if (result.success) {
       toast({
         title: "Pedido Actualizado",
-        description: "El pedido se ha actualizado exitosamente.",
+        description: `El pedido ${orderId} se ha actualizado exitosamente.`,
       });
       router.push(`/pedidos?highlight=${orderId}`);
     } else {
