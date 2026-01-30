@@ -288,8 +288,8 @@ export default function PedidosPage() {
   };
 
   return (
-    <div className="p-4 space-y-6 flex flex-col h-full">
-      <div className="flex justify-between items-center flex-shrink-0">
+    <div className="py-4 space-y-6 flex flex-col h-full">
+      <div className="px-4 flex justify-between items-center flex-shrink-0">
         <h1 className="text-3xl font-bold font-headline text-primary">Pedidos</h1>
         <div className="flex gap-2">
             <Button variant="outline" size="icon" onClick={handleRefresh} disabled={isLoading || isFetchingMore}>
@@ -305,23 +305,25 @@ export default function PedidosPage() {
       </div>
 
       {pedidosLocales.length > 0 && isOnline && (
-        <Card className="border-primary/50 bg-primary/10">
-          <CardContent className="p-3 flex items-center justify-between gap-4">
-            <div className='space-y-1'>
-              <p className="font-bold text-primary">Pedidos locales pendientes</p>
-              <p className="text-sm text-foreground/80">
-                Tiene {pedidosLocales.length} pedido(s) guardado(s) localmente.
-              </p>
-            </div>
-            <Button onClick={handleSyncLocal} disabled={isSyncingLocal}>
-              <RefreshCw className={cn("mr-2 h-4 w-4", isSyncingLocal && "animate-spin")} />
-              {isSyncingLocal ? 'Sincronizando...' : 'Sincronizar'}
-            </Button>
-          </CardContent>
-        </Card>
+        <div className="px-4">
+            <Card className="border-primary/50 bg-primary/10">
+            <CardContent className="p-3 flex items-center justify-between gap-4">
+                <div className='space-y-1'>
+                <p className="font-bold text-primary">Pedidos locales pendientes</p>
+                <p className="text-sm text-foreground/80">
+                    Tiene {pedidosLocales.length} pedido(s) guardado(s) localmente.
+                </p>
+                </div>
+                <Button onClick={handleSyncLocal} disabled={isSyncingLocal}>
+                <RefreshCw className={cn("mr-2 h-4 w-4", isSyncingLocal && "animate-spin")} />
+                {isSyncingLocal ? 'Sincronizando...' : 'Sincronizar'}
+                </Button>
+            </CardContent>
+            </Card>
+        </div>
       )}
 
-      <div className="relative flex-shrink-0">
+      <div className="px-4 relative flex-shrink-0">
         <Input 
           placeholder="Buscar por ID, cliente, RIF, zona o estado..."
           value={searchTerm}
@@ -345,7 +347,7 @@ export default function PedidosPage() {
             <Loader2 className="w-8 h-8 animate-spin text-primary" />
         </div>
       ) : combinedPedidos.length === 0 && !searchTerm ? (
-        <div className="flex-grow flex flex-col justify-center items-center text-center py-10 border-2 border-dashed rounded-lg">
+        <div className="flex-grow flex flex-col justify-center items-center text-center py-10 border-2 border-dashed rounded-lg mx-4">
           <p className="text-muted-foreground mb-4">No hay pedidos para mostrar.</p>
           <Link href="/pedidos/nuevo" passHref>
               <Button>
@@ -360,7 +362,7 @@ export default function PedidosPage() {
         </div>
       ) : (
         <ScrollArea className="flex-grow">
-            <div className="space-y-4 p-2">
+            <div className="space-y-4 px-4 py-2">
                 {filteredPedidos.map((pedido, index) => {
                     const cliente = getCliente(pedido.idCliente);
                     const isLastElement = index === filteredPedidos.length - 1;
