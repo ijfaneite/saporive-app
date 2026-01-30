@@ -94,8 +94,25 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
           await db.productos.bulkPut(productosResult.value);
           setProductos(productosResult.value);
           
-          await db.empresas.bulkPut(empresasResult.value);
-          setEmpresas(empresasResult.value);
+          const incomingEmpresas = empresasResult.value;
+          const localEmpresas = await db.empresas.toArray();
+          const localEmpresasMap = new Map(localEmpresas.map(e => [e.idEmpresa, e]));
+
+          const mergedEmpresas = incomingEmpresas.map(incoming => {
+            const local = localEmpresasMap.get(incoming.idEmpresa);
+            if (local) {
+              // Merge: take server data, but keep higher counter values from local cache
+              return {
+                ...incoming,
+                idPedido: Math.max(local.idPedido, incoming.idPedido),
+                idRecibo: Math.max(local.idRecibo, incoming.idRecibo),
+              };
+            }
+            return incoming; // No local version, use server's
+          });
+
+          await db.empresas.bulkPut(mergedEmpresas);
+          setEmpresas(mergedEmpresas);
 
           await db.asesores.bulkPut(asesoresResult.value);
           setAsesores(asesoresResult.value);
