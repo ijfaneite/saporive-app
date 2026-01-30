@@ -359,7 +359,7 @@ export default function PedidosPage() {
         </div>
       )}
 
-      <div className="px-4 pt-2 flex-shrink-0">
+      <div className="px-4 pt-2 pb-2 flex-shrink-0">
         <div className="relative">
             <Input 
               placeholder="Buscar por ID, cliente, RIF, zona o estado..."
@@ -371,7 +371,7 @@ export default function PedidosPage() {
                 <Button 
                     variant="ghost" 
                     size="icon" 
-                    className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 rounded-full"
+                    className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8 rounded-full"
                     onClick={() => setSearchTerm('')}
                 >
                     <X className="h-4 w-4 text-muted-foreground" />
