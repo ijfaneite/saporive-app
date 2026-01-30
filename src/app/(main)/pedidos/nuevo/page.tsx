@@ -28,9 +28,9 @@ export default function NuevoPedidoPage() {
 
   useEffect(() => {
     if (!isOnline) {
-        setIdPedidoGenerado("PENDIENTE (OFFLINE)");
+        setIdPedidoGenerado("(OFFLINE)");
     } else {
-      setIdPedidoGenerado("Generando ID...");
+      setIdPedidoGenerado("(NUEVO ID)");
     }
   }, [isOnline]);
 
