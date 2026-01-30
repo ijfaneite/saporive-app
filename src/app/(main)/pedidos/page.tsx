@@ -359,23 +359,25 @@ export default function PedidosPage() {
         </div>
       )}
 
-      <div className="px-4 pt-4 relative flex-shrink-0">
-        <Input 
-          placeholder="Buscar por ID, cliente, RIF, zona o estado..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="pr-10"
-        />
-        {searchTerm && (
-            <Button 
-                variant="ghost" 
-                size="icon" 
-                className="absolute right-5 top-1/2 -translate-y-1/2 h-8 w-8 rounded-full"
-                onClick={() => setSearchTerm('')}
-            >
-                <X className="h-4 w-4 text-muted-foreground" />
-            </Button>
-        )}
+      <div className="px-4 pt-2 flex-shrink-0">
+        <div className="relative">
+            <Input 
+              placeholder="Buscar por ID, cliente, RIF, zona o estado..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pr-10"
+            />
+            {searchTerm && (
+                <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 rounded-full"
+                    onClick={() => setSearchTerm('')}
+                >
+                    <X className="h-4 w-4 text-muted-foreground" />
+                </Button>
+            )}
+        </div>
       </div>
 
       {isLoading ? (
