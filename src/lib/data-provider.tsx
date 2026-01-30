@@ -8,6 +8,7 @@ import { useApiStatus } from '@/hooks/use-api-status';
 import { useAuth } from './auth';
 import { db } from './db';
 import { Result, success, failure, safeFetch } from './result';
+import { generarIdCorrelativo } from './correlativo';
 
 
 interface DataContextType {
@@ -227,12 +228,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         for (let attempts = 0; attempts < MAX_ATTEMPTS; attempts++) {
             nextIdCounter++;
             
-            const date = new Date();
-            const year = String(date.getFullYear()).slice(-2);
-            const month = String(date.getMonth() + 1).padStart(2, '0');
-            const day = String(date.getDate()).padStart(2, '0');
-            const nextIdStr = String(nextIdCounter).padStart(3, '0');
-            const candidateId = `${year}${month}${day}-${nextIdStr}`;
+            const candidateId = generarIdCorrelativo(nextIdCounter);
     
             const checkResult = await safeFetch(`${API_BASE_URL}${API_ROUTES.pedidos}${candidateId}`, {
                 headers: { Authorization: `Bearer ${token}` },
